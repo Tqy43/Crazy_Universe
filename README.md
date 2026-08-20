@@ -28,15 +28,9 @@ npm install
 npm run watch
 ```
 
-改完代码后，在开发窗口执行 `Developer: Reload Window`。改过 Webview（任务列表 / 时间线）时建议重新 F5，否则可能仍显示旧页面。
+改完代码后，在开发窗口执行 `Developer: Reload Window`。
 
-## 界面要点
-
-- **任务**：标题栏 `搜索` / `+`；行内按钮靠右（开始、暂停、标记、恢复）；右键菜单出现在鼠标旁，点别处即关
-- **时间线**：标题栏漏斗筛选（全部 / 状态 / 标记）与添加标记；事件按时间轴展示，默认新到旧、无序号
-- **状态栏左侧**：`无当前任务` 或 `标题 · 进行中`，点击打开当前任务菜单
-
-数据在本机：`%APPDATA%\Cursor\User\globalStorage\Tqy43.crazy-universe\`（VS Code 则为对应编辑器的 `globalStorage`）。
+改过 Webview（任务列表 / 时间线）时建议重新 F5，否则可能仍显示旧页面。
 
 ## 项目结构
 
@@ -57,6 +51,8 @@ Crazy_Universe/
 └── esbuild.js
 ```
 
+
+
 ## 测试与打包
 
 ```bash
@@ -64,6 +60,8 @@ npm test
 npm run lint
 npm run package
 ```
+
+
 
 ## 问题反馈
 
