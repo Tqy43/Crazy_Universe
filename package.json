@@ -1,0 +1,224 @@
+{
+  "name": "crazy-universe",
+  "displayName": "Crazy Universe",
+  "description": "管理多个开发任务上下文，并记录开发工作流（本地、隐私优先）",
+  "version": "0.1.0",
+  "publisher": "Tqy43",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tqy43/Crazy_Universe"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "crazyUniverse",
+          "title": "Crazy Universe",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "crazyUniverse": [
+        {
+          "id": "crazyUniverse.tasks",
+          "name": "任务",
+          "type": "webview",
+          "contextualTitle": "Crazy Universe"
+        },
+        {
+          "id": "crazyUniverse.timeline",
+          "name": "时间线",
+          "type": "webview",
+          "contextualTitle": "时间线"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "crazyUniverse.newTask",
+        "title": "新建任务",
+        "category": "Crazy Universe",
+        "icon": "$(add)"
+      },
+      {
+        "command": "crazyUniverse.startTask",
+        "title": "开始任务",
+        "category": "Crazy Universe",
+        "icon": "$(play)"
+      },
+      {
+        "command": "crazyUniverse.pauseTask",
+        "title": "暂停任务",
+        "category": "Crazy Universe",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "crazyUniverse.resumeTask",
+        "title": "恢复任务",
+        "category": "Crazy Universe",
+        "icon": {
+          "light": "resources/action-resume.svg",
+          "dark": "resources/action-resume-dark.svg"
+        }
+      },
+      {
+        "command": "crazyUniverse.completeTask",
+        "title": "完成任务",
+        "category": "Crazy Universe",
+        "icon": "$(check)"
+      },
+      {
+        "command": "crazyUniverse.addNote",
+        "title": "添加标记",
+        "category": "Crazy Universe",
+        "icon": {
+          "light": "resources/action-note.svg",
+          "dark": "resources/action-note-dark.svg"
+        }
+      },
+      {
+        "command": "crazyUniverse.openTimeline",
+        "title": "打开时间线",
+        "category": "Crazy Universe"
+      },
+      {
+        "command": "crazyUniverse.focus",
+        "title": "聚焦侧边栏",
+        "category": "Crazy Universe"
+      },
+      {
+        "command": "crazyUniverse.filterTasks",
+        "title": "搜索任务",
+        "category": "Crazy Universe",
+        "icon": "$(search)"
+      },
+      {
+        "command": "crazyUniverse.filterTimeline",
+        "title": "筛选时间线",
+        "category": "Crazy Universe",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "crazyUniverse.deleteTask",
+        "title": "删除任务",
+        "category": "Crazy Universe"
+      },
+      {
+        "command": "crazyUniverse.renameTask",
+        "title": "重命名任务",
+        "category": "Crazy Universe"
+      },
+      {
+        "command": "crazyUniverse.statusBarPick",
+        "title": "当前任务菜单",
+        "category": "Crazy Universe",
+        "icon": "$(menu)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "crazyUniverse.startTask",
+          "when": "crazyUniverse.hasSelection && crazyUniverse.selectionStatus =~ /not_started|paused/"
+        },
+        {
+          "command": "crazyUniverse.pauseTask",
+          "when": "crazyUniverse.hasActiveTask || crazyUniverse.selectionStatus == in_progress"
+        },
+        {
+          "command": "crazyUniverse.resumeTask",
+          "when": "crazyUniverse.selectionStatus == completed"
+        },
+        {
+          "command": "crazyUniverse.completeTask",
+          "when": "crazyUniverse.selectionStatus =~ /in_progress|paused/"
+        },
+        {
+          "command": "crazyUniverse.addNote",
+          "when": "crazyUniverse.hasSelection"
+        },
+        {
+          "command": "crazyUniverse.filterTimeline",
+          "when": "crazyUniverse.hasSelection"
+        },
+        {
+          "command": "crazyUniverse.openTimeline",
+          "when": "crazyUniverse.hasSelection"
+        },
+        {
+          "command": "crazyUniverse.deleteTask",
+          "when": "crazyUniverse.hasSelection"
+        },
+        {
+          "command": "crazyUniverse.renameTask",
+          "when": "crazyUniverse.hasSelection"
+        },
+        {
+          "command": "crazyUniverse.statusBarPick"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "crazyUniverse.newTask",
+          "when": "view == crazyUniverse.tasks",
+          "group": "navigation"
+        },
+        {
+          "command": "crazyUniverse.filterTasks",
+          "when": "view == crazyUniverse.tasks",
+          "group": "navigation"
+        },
+        {
+          "command": "crazyUniverse.filterTimeline",
+          "when": "view == crazyUniverse.timeline",
+          "group": "navigation@0"
+        },
+        {
+          "command": "crazyUniverse.addNote",
+          "when": "view == crazyUniverse.timeline && crazyUniverse.hasSelection",
+          "group": "navigation@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Crazy Universe",
+      "properties": {
+        "crazyUniverse.snapshot.includeOpenFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "快照中包含已打开的编辑器文件列表"
+        },
+        "crazyUniverse.snapshot.includeChangedPaths": {
+          "type": "boolean",
+          "default": true,
+          "description": "git status 摘要中包含变更文件路径（不含文件内容）"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test src/domain/stateMachine.test.ts src/domain/TaskService.test.ts src/webview/timelineModel.test.ts src/snapshot/gitParse.test.ts src/snapshot/paths.test.ts src/snapshot/gitRoots.test.ts src/feishu/links.test.ts",
+    "package": "npx --yes @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

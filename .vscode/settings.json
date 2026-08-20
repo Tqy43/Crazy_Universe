@@ -1,0 +1,12 @@
+{
+  "debug.onTaskErrors": "debugAnyway",
+  "markdownlint.enable": false,
+  "markdown.validate.enabled": false,
+  "[markdown]": {
+    "editor.quickSuggestions": {
+      "other": false,
+      "comments": false,
+      "strings": false
+    }
+  }
+}
