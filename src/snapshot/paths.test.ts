@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { resolveFsPath, scopedRelativeFiles, toRelativePath } from './paths';
+import { resolveFsPath, scopedRelativeFiles, toRelativePath, fileName } from './paths';
 
 test('相对路径与绝对路径互转', () => {
   assert.equal(toRelativePath('D:\\work\\demo\\src\\a.ts', 'D:\\work\\demo'), 'src/a.ts');
@@ -16,4 +16,12 @@ test('只保留当前 Git 仓库内打开的文件', () => {
     'D:\\Program\\Crazy_Universe\\src\\extension.ts',
   ];
   assert.deepEqual(scopedRelativeFiles(files, 'D:\\Program\\project2\\A_Unieat'), ['src/a.ts']);
+});
+
+test('fileName 只取最后一段', () => {
+  assert.equal(
+    fileName('packages/jsy-portal-react/src/cloudmigration/CloudMigrationAddDialog.tsx'),
+    'CloudMigrationAddDialog.tsx',
+  );
+  assert.equal(fileName('D:\\work\\demo\\src\\a.ts'), 'a.ts');
 });

@@ -1,19 +1,26 @@
 import type { AutoSnapshot, Event, Task, TaskStatus } from '../types';
 import { noteKindLabel } from '../domain/notes';
 import { statusLabel } from '../domain/stateMachine';
-import { findFeishuRef } from '../feishu/links';
-import { DISPLAY_COMMITS, formatGitDetailText } from '../snapshot/gitParse';
-import { toRelativePath } from '../snapshot/paths';
+import { findCommitFeishuRef } from '../feishu/links';
+import { fileName } from '../snapshot/paths';
 
 export type TimelineFilter = 'all' | 'status' | 'notes';
 
 export type EventBar = 'created' | 'started' | 'paused' | 'completed' | 'resumed' | 'note' | 'system';
+
+export interface SnapshotCommitRow {
+  hash: string;
+  subject: string;
+  feishuText: string;
+  feishuHref?: string;
+}
 
 export interface SnapshotDetail {
   label: string;
   value?: string;
   href?: string;
   files?: Array<{ label: string; path: string }>;
+  commits?: SnapshotCommitRow[];
 }
 
 export interface TimelineEventRow {
@@ -127,64 +134,36 @@ export function snapshotSummaryLine(snapshot?: AutoSnapshot): string | undefined
 
 export function snapshotDetails(
   snapshot: AutoSnapshot | undefined,
-  options: { includeOpenFiles: boolean; includeChangedPaths: boolean },
+  _options: { includeOpenFiles: boolean; includeChangedPaths: boolean },
   eventType?: Event['type'],
-  extraTexts: Array<string | undefined> = [],
 ): SnapshotDetail[] {
   if (!snapshot) {
-    const feishu = findFeishuRef(...extraTexts);
-    return [{ label: '飞书', value: feishu.text, href: feishu.href }];
+    return [];
   }
   const details: SnapshotDetail[] = [];
-  const { context } = snapshot;
-  const projectRoot = context.gitRoot || context.workspacePath || '';
-  if (context.branch) {
-    details.push({
-      label: '分支',
-      value: context.isDetached ? `detached (${context.branch})` : context.branch,
-    });
-  }
-  if (snapshot.gitStatusSummary.available) {
-    details.push({
-      label: '未提交改动',
-      value: formatGitDetailText({
-        stagedCount: snapshot.gitStatusSummary.stagedCount,
-        unstagedCount: snapshot.gitStatusSummary.unstagedCount,
-        untrackedCount: snapshot.gitStatusSummary.untrackedCount,
-        changedPaths: [],
-      }),
-    });
-  }
-  if (options.includeOpenFiles && snapshot.openFiles.length > 0) {
-    details.push({
-      label: '当时打开的文件',
-      files: snapshot.openFiles.map((file) => ({
-        label: toRelativePath(file, projectRoot),
-        path: file,
-      })),
-    });
-  }
-  if (options.includeOpenFiles && snapshot.activeFile) {
+  if (snapshot.activeFile) {
     details.push({
       label: '当时正在看的文件',
       files: [
         {
-          label: toRelativePath(snapshot.activeFile, projectRoot),
+          label: fileName(snapshot.activeFile),
           path: snapshot.activeFile,
         },
       ],
     });
   }
   if (snapshot.recentCommits.length > 0) {
-    const shown = snapshot.recentCommits.slice(0, DISPLAY_COMMITS);
-    const more = snapshot.recentCommits.length - shown.length;
-    let value = shown.map((item) => `${item.hash}  ${item.subject}`).join('\n');
-    if (more > 0) {
-      value += `\n… 还有 ${more} 条`;
-    }
     details.push({
       label: `本任务期间的提交（${snapshot.recentCommits.length}）`,
-      value,
+      commits: snapshot.recentCommits.map((item) => {
+        const feishu = findCommitFeishuRef(item.subject);
+        return {
+          hash: item.hash,
+          subject: item.subject,
+          feishuText: feishu.text,
+          feishuHref: feishu.href,
+        };
+      }),
     });
   } else if (eventType && eventType !== 'task.created' && eventType !== 'task.started') {
     details.push({
@@ -192,17 +171,6 @@ export function snapshotDetails(
       value: '本次开始后还没有新的提交',
     });
   }
-  const feishu = findFeishuRef(
-    ...extraTexts,
-    snapshot.openFiles.join('\n'),
-    snapshot.activeFile,
-    snapshot.recentCommits.map((item) => item.subject).join('\n'),
-  );
-  details.push({
-    label: '飞书',
-    value: feishu.text,
-    href: feishu.href,
-  });
   return details;
 }
 
@@ -277,10 +245,7 @@ export function buildTimelineRows(
       body: event.body,
       bar: eventBar(event),
       snapshotSummary: snapshotSummaryLine(event.snapshot),
-      snapshotDetails: snapshotDetails(event.snapshot, options, event.type, [
-        options.taskTitle,
-        event.body,
-      ]),
+      snapshotDetails: snapshotDetails(event.snapshot, options, event.type),
       workspacePath: event.snapshot?.context.gitRoot || event.snapshot?.context.workspacePath || '',
     });
 

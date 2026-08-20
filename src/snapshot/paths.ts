@@ -26,6 +26,11 @@ export function scopedRelativeFiles(files: string[], root: string): string[] {
   return result;
 }
 
+export function fileName(filePath: string): string {
+  const base = filePath.replace(/\\/g, '/').split('/').filter(Boolean).at(-1);
+  return base ?? filePath;
+}
+
 export function toRelativePath(fsPath: string, workspacePath: string): string {
   if (!fsPath) {
     return '';

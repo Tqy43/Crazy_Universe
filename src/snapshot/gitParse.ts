@@ -2,7 +2,7 @@ import type { GitStatusSummary } from '../types';
 
 export const MAX_CHANGED_PATHS = 50;
 export const MAX_COMMITS = 30;
-export const DISPLAY_COMMITS = 5;
+export const DISPLAY_COMMITS = 3;
 
 export interface ParsedGitStatus {
   stagedCount: number;

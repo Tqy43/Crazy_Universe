@@ -1,3 +1,4 @@
+import { DISPLAY_COMMITS } from '../snapshot/gitParse';
 import type { TimelineViewModel } from './timelineModel';
 
 function nonce(): string {
@@ -159,8 +160,14 @@ export function renderTimelineShell(): { html: string } {
       font-size: 12px;
     }
     .snap summary { cursor: pointer; }
+    .snap-static { margin-top: 4px; }
     .snap dl { margin: 4px 0 0; }
     .snap dt { color: var(--vscode-descriptionForeground); font-size: 11px; }
+    .snap dt:not(:first-child) {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--vscode-widget-border, var(--vscode-sideBar-border));
+    }
     .snap dd { margin: 0 0 6px; white-space: pre-wrap; word-break: break-word; }
     .file-link {
       display: block;
@@ -172,9 +179,48 @@ export function renderTimelineShell(): { html: string } {
       cursor: pointer;
       text-align: left;
       text-decoration: underline;
-      word-break: break-all;
+      word-break: break-word;
     }
     .file-link.ext-link { display: inline; }
+    .commits { list-style: none; margin: 0; padding: 0; }
+    .commit { margin: 0 0 8px; }
+    .commit.hidden-commit { display: none; }
+    .commits-expanded .commit.hidden-commit { display: block; }
+    .commit-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: baseline;
+    }
+    .commit-hash {
+      font-family: var(--vscode-editor-font-family, inherit);
+      color: var(--vscode-descriptionForeground);
+    }
+    .feishu-muted { color: var(--vscode-disabledForeground); }
+    .commit-toggle {
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      color: var(--vscode-descriptionForeground);
+      line-height: 1;
+    }
+    .commit-toggle::before { content: "▸"; }
+    .commit.open .commit-toggle::before { content: "▾"; }
+    .commit-msg {
+      display: none;
+      margin-top: 2px;
+      word-break: break-word;
+    }
+    .commit.open .commit-msg { display: block; }
+    .commit-more {
+      margin-top: 2px;
+      background: transparent;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      color: var(--vscode-textLink-foreground);
+    }
     .error {
       flex-shrink: 0;
       color: var(--vscode-errorForeground);
@@ -266,6 +312,29 @@ export function renderTimelineShell(): { html: string } {
         .replace(/"/g, '&quot;');
     }
 
+    const DISPLAY_COMMITS = ${DISPLAY_COMMITS};
+
+    function renderCommits(commits) {
+      const items = (commits || []).map((commit, index) => {
+        const hidden = index >= DISPLAY_COMMITS ? ' hidden-commit' : '';
+        const feishu = commit.feishuHref
+          ? '<button class="file-link ext-link" type="button" data-href="' +
+            escapeHtml(commit.feishuHref) + '">' + escapeHtml(commit.feishuText) + '</button>'
+          : '<span class="feishu-muted">' + escapeHtml(commit.feishuText) + '</span>';
+        const toggle = commit.subject
+          ? '<button class="commit-toggle" type="button" data-toggle-msg="1" title="展开说明"></button>'
+          : '';
+        return '<li class="commit' + hidden + '">' +
+          '<div class="commit-head"><span class="commit-hash">' + escapeHtml(commit.hash) +
+          '</span>' + feishu + toggle + '</div>' +
+          '<div class="commit-msg">' + escapeHtml(commit.subject) + '</div></li>';
+      }).join('');
+      const more = commits && commits.length > DISPLAY_COMMITS
+        ? '<button class="commit-more" type="button" data-toggle-commits="1">展开更多</button>'
+        : '';
+      return '<ul class="commits">' + items + '</ul>' + more;
+    }
+
     function renderRows(rows) {
       if (!rows.length) {
         feedEl.innerHTML = '<p class="meta">没有符合筛选的事件。</p>';
@@ -277,23 +346,30 @@ export function renderTimelineShell(): { html: string } {
             escapeHtml(row.folderName) + ' ──</div>';
         }
         const details = (row.snapshotDetails || []).map((item) => {
-          const files = (item.files || []).map((file) =>
-            '<button class="file-link" type="button" data-file="' + escapeHtml(file.path) +
-            '" data-workspace="' + escapeHtml(row.workspacePath || '') + '">' +
-            escapeHtml(file.label) + '</button>'
-          ).join('');
-          const value = item.href
-            ? '<button class="file-link ext-link" type="button" data-href="' + escapeHtml(item.href) + '">' +
-              escapeHtml(item.value || '') + '</button>'
-            : item.value
-              ? escapeHtml(item.value)
-              : files;
+          let value = '';
+          if (item.commits && item.commits.length) {
+            value = renderCommits(item.commits);
+          } else {
+            const files = (item.files || []).map((file) =>
+              '<button class="file-link" type="button" data-file="' + escapeHtml(file.path) +
+              '" data-workspace="' + escapeHtml(row.workspacePath || '') + '">' +
+              escapeHtml(file.label) + '</button>'
+            ).join('');
+            value = item.href
+              ? '<button class="file-link ext-link" type="button" data-href="' + escapeHtml(item.href) + '">' +
+                escapeHtml(item.value || '') + '</button>'
+              : item.value
+                ? escapeHtml(item.value)
+                : files;
+          }
           return '<dt>' + escapeHtml(item.label) + '</dt><dd>' + value + '</dd>';
         }).join('');
-        const snap = row.snapshotSummary || details
+        const snap = details
           ? '<details class="snap"><summary>' + escapeHtml(row.snapshotSummary || '快照') +
-            '</summary>' + (details ? '<dl>' + details + '</dl>' : '') + '</details>'
-          : '';
+            '</summary><dl>' + details + '</dl></details>'
+          : row.snapshotSummary
+            ? '<div class="snap snap-static">' + escapeHtml(row.snapshotSummary) + '</div>'
+            : '';
         const date = row.dateLabel ? '<div class="date">' + escapeHtml(row.dateLabel) + '</div>' : '';
         const body = row.body ? '<div class="body">' + escapeHtml(row.body) + '</div>' : '';
         return '<article class="event ' + row.bar + '">' + date +
@@ -351,6 +427,23 @@ export function renderTimelineShell(): { html: string } {
           path: fileEl.getAttribute('data-file'),
           workspacePath: fileEl.getAttribute('data-workspace'),
         });
+        return;
+      }
+      const moreEl = target.closest('[data-toggle-commits]');
+      if (moreEl) {
+        const dd = moreEl.closest('dd');
+        if (dd) {
+          const expanded = dd.classList.toggle('commits-expanded');
+          moreEl.textContent = expanded ? '收起' : '展开更多';
+        }
+        return;
+      }
+      const msgToggle = target.closest('[data-toggle-msg]');
+      if (msgToggle) {
+        const commitEl = msgToggle.closest('.commit');
+        if (commitEl) {
+          commitEl.classList.toggle('open');
+        }
         return;
       }
       const hrefEl = target.closest('[data-href]');

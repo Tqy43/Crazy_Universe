@@ -132,47 +132,62 @@ test('快照摘要只有分支、状态、编号', () => {
   assert.equal(summary, 'main · 1 个新文件 · 9a92bb2');
 });
 
-test('提交过多时默认展示 5 条并带总数', () => {
+test('提交列表带总数、飞书 ID，不截断数据也不提示还有 n 条', () => {
   const details = snapshotDetails(
     {
       context: {
         workspacePath: 'D:\\work\\demo',
         projectName: 'demo',
+        branch: 'release',
         recordedAt: '2026-08-20T01:00:00.000Z',
       },
-      openFiles: [],
+      openFiles: ['D:\\work\\demo\\src\\a.ts', 'D:\\work\\demo\\src\\b.ts'],
+      activeFile: 'D:\\work\\demo\\src\\cloud\\Dialog.tsx',
       gitStatusSummary: {
-        available: false,
+        available: true,
         dirty: false,
         stagedCount: 0,
         unstagedCount: 0,
         untrackedCount: 0,
-        shortText: '',
+        shortText: '干净',
       },
       recentCommits: Array.from({ length: 12 }, (_, index) => ({
         hash: `h${index}`,
-        subject: `commit ${index}`,
+        subject:
+          index === 0
+            ? 'Pull request #8338: feat: 完成数据预览功能 #7075239972'
+            : `commit ${index}`,
         authorTime: '2026-08-20T01:00:00.000Z',
       })),
     },
-    { includeOpenFiles: false, includeChangedPaths: false },
+    { includeOpenFiles: true, includeChangedPaths: true },
     'task.paused',
   );
+  assert.equal(details.some((item) => item.label === '分支'), false);
+  assert.equal(details.some((item) => item.label === '未提交改动'), false);
+  assert.equal(details.some((item) => item.label === '当时打开的文件'), false);
+  assert.equal(details.some((item) => item.label === '飞书'), false);
+
+  const active = details.find((item) => item.label === '当时正在看的文件');
+  assert.deepEqual(active?.files, [
+    { label: 'Dialog.tsx', path: 'D:\\work\\demo\\src\\cloud\\Dialog.tsx' },
+  ]);
+
   const commits = details.find((item) => item.label.startsWith('本任务期间的提交'));
   assert.equal(commits?.label, '本任务期间的提交（12）');
-  assert.equal(commits?.value?.split('\n').filter((line) => line.startsWith('h')).length, 5);
-  assert.match(commits?.value ?? '', /还有 7 条/);
+  assert.equal(commits?.commits?.length, 12);
+  assert.equal(commits?.value, undefined);
+  assert.equal(commits?.commits?.[0]?.hash, 'h0');
+  assert.equal(commits?.commits?.[0]?.feishuText, '#7075239972');
+  assert.equal(
+    commits?.commits?.[0]?.feishuHref,
+    'https://project.feishu.cn/b2rl2h/story/detail/7075239972',
+  );
+  assert.equal(commits?.commits?.[1]?.feishuText, '#none');
+  assert.equal(commits?.commits?.[1]?.feishuHref, undefined);
 });
 
-test('没有飞书任务时显示 #none，有 id 时可跳转', () => {
-  const none = snapshotDetails(undefined, { includeOpenFiles: false, includeChangedPaths: false }, 'note.added', [
-    '修登录页',
-  ]);
-  assert.deepEqual(none, [{ label: '飞书', value: '#none', href: undefined }]);
-
-  const linked = snapshotDetails(undefined, { includeOpenFiles: false, includeChangedPaths: false }, 'note.added', [
-    '飞书 #task_hello',
-  ]);
-  assert.equal(linked[0]?.value, '#task_hello');
-  assert.ok(linked[0]?.href?.includes('task_hello'));
+test('没有快照时不再单独显示飞书', () => {
+  const none = snapshotDetails(undefined, { includeOpenFiles: false, includeChangedPaths: false }, 'note.added');
+  assert.deepEqual(none, []);
 });
