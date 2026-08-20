@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { AutoSnapshot, Event, EventType, NoteKind, Task, WorkContext } from '../types';
 import type { StoreFile, TaskStoreLike } from '../store/schema';
 import { MAX_COMMITS, filterCommitsInPeriod } from '../snapshot/gitParse';
@@ -17,7 +18,7 @@ export class TaskService {
   async createTask(title: string): Promise<Task> {
     const trimmed = title.trim();
     if (!trimmed) {
-      throw new Error('标题不能为空');
+      throw new Error(t('error.titleEmpty'));
     }
 
     const now = new Date().toISOString();
@@ -37,7 +38,7 @@ export class TaskService {
       draft.events.push(makeEvent(id, 'task.created', now, scopedSnapshot(snapshot, draft, id, now)));
     });
 
-    return this.requireTask(id, '创建任务后未能读回记录');
+    return this.requireTask(id, t('error.readBack'));
   }
 
   async start(taskId: string): Promise<{ pausedTitle?: string }> {
@@ -61,7 +62,7 @@ export class TaskService {
             'task.paused',
             now,
             scopedSnapshot(pauseSnapshot, draft, live.id, now),
-            `暂停 — ${task.title}任务进行中`,
+            t('event.pausedFor', { title: task.title }),
           ),
         );
       }
@@ -116,7 +117,7 @@ export class TaskService {
   async addNote(taskId: string, kind: NoteKind, body: string): Promise<void> {
     const trimmed = body.trim();
     if (!trimmed) {
-      throw new Error('请填写标记正文');
+      throw new Error(t('error.noteBody'));
     }
     const snapshot = await this.snapshot(taskId);
     const now = new Date().toISOString();
@@ -124,7 +125,7 @@ export class TaskService {
     await this.store.commit((draft) => {
       const task = requireTaskInDraft(draft, taskId);
       if (task.status === 'completed') {
-        throw new Error('已完成任务请先恢复到活动再添加标记');
+        throw new Error(t('warn.noteNeedActive'));
       }
       task.updatedAt = now;
       task.lastContext = snapshot.context;
@@ -137,7 +138,7 @@ export class TaskService {
   async rename(taskId: string, title: string): Promise<void> {
     const trimmed = title.trim();
     if (!trimmed) {
-      throw new Error('标题不能为空');
+      throw new Error(t('error.titleEmpty'));
     }
 
     await this.store.commit((draft) => {
@@ -151,7 +152,7 @@ export class TaskService {
     await this.store.commit((draft) => {
       const index = draft.tasks.findIndex((item) => item.id === taskId);
       if (index < 0) {
-        throw new Error('任务不存在');
+        throw new Error(t('warn.missingTask'));
       }
       draft.tasks.splice(index, 1);
       draft.events = draft.events.filter((event) => event.taskId !== taskId);
@@ -199,7 +200,7 @@ function applyStatus(
 function requireTaskInDraft(draft: StoreFile, taskId: string): Task {
   const task = draft.tasks.find((item) => item.id === taskId);
   if (!task) {
-    throw new Error('任务不存在');
+    throw new Error(t('warn.missingTask'));
   }
   return task;
 }

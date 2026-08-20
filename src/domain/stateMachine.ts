@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { EventType, TaskStatus } from '../types';
 
 export type LifecycleAction = 'start' | 'pause' | 'resume' | 'complete';
@@ -14,7 +15,7 @@ export class IllegalTransitionError extends Error {
     public readonly from: TaskStatus,
     public readonly action: LifecycleAction,
   ) {
-    super(`当前状态为「${statusLabel(from)}」，无法${actionLabel(action)}。`);
+    super(t('error.illegalTransition', { status: statusLabel(from), action: actionLabel(action) }));
     this.name = 'IllegalTransitionError';
   }
 }
@@ -65,13 +66,13 @@ export function eventTypeFor(action: LifecycleAction): EventType {
 export function statusLabel(status: TaskStatus): string {
   switch (status) {
     case 'not_started':
-      return '未开始';
+      return t('status.not_started');
     case 'in_progress':
-      return '进行中';
+      return t('status.in_progress');
     case 'paused':
-      return '已暂停';
+      return t('status.paused');
     case 'completed':
-      return '已完成';
+      return t('status.completed');
     default: {
       const exhaustive: never = status;
       return exhaustive;
@@ -82,13 +83,13 @@ export function statusLabel(status: TaskStatus): string {
 function actionLabel(action: LifecycleAction): string {
   switch (action) {
     case 'start':
-      return '开始';
+      return t('action.start');
     case 'pause':
-      return '暂停';
+      return t('action.pause');
     case 'resume':
-      return '恢复';
+      return t('action.resume');
     case 'complete':
-      return '完成';
+      return t('action.complete');
     default: {
       const exhaustive: never = action;
       return exhaustive;

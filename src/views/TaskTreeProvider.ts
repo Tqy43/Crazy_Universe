@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { COMMANDS } from '../constants';
+import { t } from '../i18n';
 import type { Task } from '../types';
 import type { TaskStore } from '../store/TaskStore';
 import {
@@ -33,17 +34,17 @@ export class TaskTreeProvider implements vscode.TreeDataProvider<TaskTreeNode> {
     if (!element) {
       if (this.store.getTasks().length === 0) {
         return [
-          new PlaceholderItem('placeholder:empty.hint', '管理多个开发任务上下文，并记录开发工作流。'),
-          new PlaceholderItem('placeholder:empty.create', '新建任务', {
+          new PlaceholderItem('placeholder:empty.hint', t('empty.hint')),
+          new PlaceholderItem('placeholder:empty.create', t('action.new'), {
             icon: 'add',
-            command: { command: COMMANDS.newTask, title: '新建任务' },
+            command: { command: COMMANDS.newTask, title: t('action.new') },
           }),
         ];
       }
       return [
-        new SectionItem('current', '当前任务', vscode.TreeItemCollapsibleState.Expanded),
-        new SectionItem('active', '活动', vscode.TreeItemCollapsibleState.Expanded),
-        new SectionItem('completed', '已完成', vscode.TreeItemCollapsibleState.Collapsed),
+        new SectionItem('current', t('section.current'), vscode.TreeItemCollapsibleState.Expanded),
+        new SectionItem('active', t('section.active'), vscode.TreeItemCollapsibleState.Expanded),
+        new SectionItem('completed', t('section.completed'), vscode.TreeItemCollapsibleState.Collapsed),
       ];
     }
 
@@ -56,7 +57,7 @@ export class TaskTreeProvider implements vscode.TreeDataProvider<TaskTreeNode> {
       const current = tasks.find((task) => task.status === 'in_progress');
       return current
         ? [new TaskItem(current, this.extensionUri)]
-        : [new PlaceholderItem('placeholder:current', '没有进行中的任务')];
+        : [new PlaceholderItem('placeholder:current', t('empty.noInProgress'))];
     }
 
     if (element.sectionId === 'active') {
@@ -74,15 +75,15 @@ export class TaskTreeProvider implements vscode.TreeDataProvider<TaskTreeNode> {
       if (element.id?.startsWith('placeholder:empty')) {
         return undefined;
       }
-      return new SectionItem('current', '当前任务', vscode.TreeItemCollapsibleState.Expanded);
+      return new SectionItem('current', t('section.current'), vscode.TreeItemCollapsibleState.Expanded);
     }
     if (element.task.status === 'completed') {
-      return new SectionItem('completed', '已完成', vscode.TreeItemCollapsibleState.Collapsed);
+      return new SectionItem('completed', t('section.completed'), vscode.TreeItemCollapsibleState.Collapsed);
     }
     if (element.task.status === 'in_progress') {
-      return new SectionItem('current', '当前任务', vscode.TreeItemCollapsibleState.Expanded);
+      return new SectionItem('current', t('section.current'), vscode.TreeItemCollapsibleState.Expanded);
     }
-    return new SectionItem('active', '活动', vscode.TreeItemCollapsibleState.Expanded);
+    return new SectionItem('active', t('section.active'), vscode.TreeItemCollapsibleState.Expanded);
   }
 
   asTaskItem(taskId: string): TaskItem | undefined {

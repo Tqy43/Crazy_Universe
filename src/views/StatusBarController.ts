@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { COMMANDS } from '../constants';
 import { statusLabel } from '../domain/stateMachine';
+import { t } from '../i18n';
 import type { TaskStore } from '../store/TaskStore';
 
 export class StatusBarController implements vscode.Disposable {
@@ -12,10 +13,10 @@ export class StatusBarController implements vscode.Disposable {
     private readonly log?: (message: string) => void,
   ) {
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-    this.item.name = 'Crazy Universe 当前任务';
+    this.item.name = t('statusBar.name');
     this.item.command = COMMANDS.statusBarPick;
     this.item.accessibilityInformation = {
-      label: 'Crazy Universe 当前任务',
+      label: t('statusBar.name'),
     };
     this.refresh();
     this.item.show();
@@ -30,10 +31,14 @@ export class StatusBarController implements vscode.Disposable {
   }
 
   refresh(): void {
+    this.item.name = t('statusBar.name');
+    this.item.accessibilityInformation = {
+      label: t('statusBar.name'),
+    };
     const current = this.store.getTasks().find((task) => task.status === 'in_progress');
     if (!current) {
-      this.item.text = '$(circle-outline) 无当前任务';
-      this.item.tooltip = 'Crazy Universe：点击开始或新建任务';
+      this.item.text = t('statusBar.none');
+      this.item.tooltip = t('statusBar.noneTooltip');
     } else {
       this.item.text = `$(circle-filled) ${truncate(current.title)} · ${statusLabel(current.status)}`;
       this.item.tooltip = [
@@ -41,7 +46,7 @@ export class StatusBarController implements vscode.Disposable {
         statusLabel(current.status),
         current.lastContext?.branch,
         current.lastContext?.projectName,
-        '点击暂停 / 标记 / 完成',
+        t('statusBar.clickHint'),
       ]
         .filter(Boolean)
         .join('\n');

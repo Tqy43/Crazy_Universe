@@ -1,6 +1,7 @@
 import type { AutoSnapshot, Event, Task, TaskStatus } from '../types';
 import { noteKindLabel } from '../domain/notes';
 import { statusLabel } from '../domain/stateMachine';
+import { displayGitShort, t } from '../i18n';
 import { findCommitFeishuRef } from '../feishu/links';
 import { fileName } from '../snapshot/paths';
 
@@ -121,9 +122,9 @@ export function snapshotSummaryLine(snapshot?: AutoSnapshot): string | undefined
     parts.push(snapshot.context.isDetached ? `detached ${snapshot.context.branch}` : snapshot.context.branch);
   }
   if (snapshot.gitStatusSummary.available && snapshot.gitStatusSummary.shortText) {
-    parts.push(snapshot.gitStatusSummary.shortText);
+    parts.push(displayGitShort(snapshot.gitStatusSummary.shortText));
   } else if (!snapshot.gitStatusSummary.available && snapshot.context.workspacePath) {
-    parts.push('未检测到 Git');
+    parts.push(t('git.missing'));
   }
   const commit = snapshot.recentCommits[0];
   if (commit) {
@@ -143,7 +144,7 @@ export function snapshotDetails(
   const details: SnapshotDetail[] = [];
   if (snapshot.activeFile) {
     details.push({
-      label: '当时正在看的文件',
+      label: t('timeline.activeFile'),
       files: [
         {
           label: fileName(snapshot.activeFile),
@@ -154,7 +155,7 @@ export function snapshotDetails(
   }
   if (snapshot.recentCommits.length > 0) {
     details.push({
-      label: `本任务期间的提交（${snapshot.recentCommits.length}）`,
+      label: t('timeline.commits', { count: snapshot.recentCommits.length }),
       commits: snapshot.recentCommits.map((item) => {
         const feishu = findCommitFeishuRef(item.subject);
         return {
@@ -167,8 +168,8 @@ export function snapshotDetails(
     });
   } else if (eventType && eventType !== 'task.created' && eventType !== 'task.started') {
     details.push({
-      label: '本任务期间的提交（0）',
-      value: '本次开始后还没有新的提交',
+      label: t('timeline.commits', { count: 0 }),
+      value: t('timeline.commitsEmpty'),
     });
   }
   return details;
@@ -177,19 +178,19 @@ export function snapshotDetails(
 export function eventTypeLabel(event: Event): string {
   switch (event.type) {
     case 'task.created':
-      return '创建';
+      return t('event.created');
     case 'task.started':
-      return '开始';
+      return t('event.started');
     case 'task.paused':
-      return '暂停';
+      return t('event.paused');
     case 'task.resumed':
-      return '恢复';
+      return t('event.resumed');
     case 'task.completed':
-      return '完成';
+      return t('event.completed');
     case 'note.added':
-      return `标记 · ${noteKindLabel(event.noteKind)}`;
+      return t('event.noteKind', { kind: noteKindLabel(event.noteKind) });
     case 'snapshot.auto':
-      return '系统快照';
+      return t('event.snapshot');
     default:
       return event.type;
   }
@@ -228,7 +229,7 @@ export function buildTimelineRows(
       rows.push({
         kind: 'separator',
         id: `sep:${event.id}`,
-        folderName: folderName(path) || '工作区',
+        folderName: folderName(path) || t('timeline.workspace'),
         workspacePath: path,
       });
     }
@@ -239,7 +240,7 @@ export function buildTimelineRows(
       id: event.id,
       type: event.type,
       typeLabel: eventTypeLabel(event),
-      sourceLabel: event.source === 'system' || event.type === 'snapshot.auto' ? '系统' : '用户',
+      sourceLabel: event.source === 'system' || event.type === 'snapshot.auto' ? t('event.system') : t('event.user'),
       timeLabel: formatHm(event.createdAt),
       dateLabel: previousDay === undefined || day !== previousDay ? day : undefined,
       body: event.body,
@@ -268,7 +269,7 @@ export function buildTimelineViewModel(input: {
   if (!input.task) {
     return {
       empty: true,
-      emptyMessage: '选择一个任务以查看时间线',
+      emptyMessage: t('timeline.empty'),
       filter: input.filter,
       rows: [],
       snapshotPreview: input.snapshotPreview,

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { COMMANDS, CONFIG } from '../constants';
 import type { NoteKind, Task } from '../types';
 import type { TaskService } from '../domain/TaskService';
+import { t, webviewUi } from '../i18n';
 import { resolveFsPath } from '../snapshot/paths';
 import type { SnapshotCollector } from '../snapshot/SnapshotCollector';
 import { snapshotPreviewText } from '../snapshot/SnapshotCollector';
@@ -37,6 +38,7 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
       void this.onMessage(message);
     });
     webviewView.webview.html = renderTimelineShell().html;
+    webviewView.title = t('view.timeline');
   }
 
   setSelectedTask(task: Task | undefined): void {
@@ -47,14 +49,14 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
   async pickFilter(): Promise<void> {
     const picked = await vscode.window.showQuickPick(
       [
-        { label: '全部', description: '所有事件', filter: 'all' as const },
-        { label: '状态', description: '仅状态变更', filter: 'status' as const },
-        { label: '标记', description: '仅用户标记', filter: 'notes' as const },
+        { label: t('filter.all'), description: t('filter.allDesc'), filter: 'all' as const },
+        { label: t('filter.status'), description: t('filter.statusDesc'), filter: 'status' as const },
+        { label: t('filter.notes'), description: t('filter.notesDesc'), filter: 'notes' as const },
       ].map((item) => ({
         ...item,
         picked: item.filter === this.filter,
       })),
-      { placeHolder: '筛选时间线', ignoreFocusOut: false },
+      { placeHolder: t('filter.placeholder'), ignoreFocusOut: false },
     );
     if (!picked) {
       return;
@@ -64,6 +66,9 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
   }
 
   refresh(): void {
+    if (this.view) {
+      this.view.title = t('view.timeline');
+    }
     if (this.selectedTask) {
       this.selectedTask = this.store.getTask(this.selectedTask.id);
     }
@@ -146,14 +151,14 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
       const uri = vscode.Uri.file(fsPath);
       await vscode.window.showTextDocument(uri, { preview: true, preserveFocus: false });
     } catch {
-      void vscode.window.showWarningMessage(`无法打开文件：${relativeOrAbs}`);
+      void vscode.window.showWarningMessage(t('warn.openFile', { path: relativeOrAbs }));
     }
   }
 
   private async addNote(noteKind: unknown, body: unknown): Promise<void> {
     const task = this.selectedTask;
     if (!task) {
-      this.postError('请先选择一个任务。');
+      this.postError(t('warn.selectTask'));
       return;
     }
     const kind = NOTE_KIND_IDS.includes(noteKind as NoteKind) ? (noteKind as NoteKind) : 'other';
@@ -185,7 +190,7 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
     const gitAvailable = snapshot.gitStatusSummary.available;
     const gitHint =
       !gitAvailable && snapshot.context.workspacePath && !this.gitHintDismissed
-        ? '未检测到 Git。仍可开始、暂停和添加标记；快照中的分支与 status 将为空。'
+        ? t('git.hint')
         : '';
     const model = buildTimelineViewModel({
       task: this.selectedTask,
@@ -198,7 +203,7 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
     });
     void this.view.webview.postMessage({
       type: 'state',
-      payload: { ...model, gitAvailable, gitHint },
+      payload: { ...model, gitAvailable, gitHint, ui: webviewUi() },
     });
   }
 

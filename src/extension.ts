@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { CONFIG, CONTEXT, OUTPUT_CHANNEL, VIEWS } from './constants';
-import { registerCommands } from './commands/registerCommands';
+import { applyLocaleFromConfig, registerCommands } from './commands/registerCommands';
+import { t } from './i18n';
 import { TaskService } from './domain/TaskService';
 import { GitReader } from './snapshot/GitReader';
 import { SnapshotCollector } from './snapshot/SnapshotCollector';
@@ -10,6 +11,7 @@ import { TaskListViewProvider } from './views/TaskListViewProvider';
 import { TimelineViewProvider } from './views/TimelineViewProvider';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  applyLocaleFromConfig();
   const output = vscode.window.createOutputChannel(OUTPUT_CHANNEL);
   context.subscriptions.push(output);
 
@@ -23,8 +25,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         : error instanceof Error
           ? error.message
           : String(error);
-    void vscode.window.showErrorMessage(`Crazy Universe 无法打开本地任务库：${message}`);
-    output.appendLine(`打开任务库失败：${message}`);
+    void vscode.window.showErrorMessage(t('error.openStore', { message }));
+    output.appendLine(t('error.openStore', { message }));
     return;
   }
 
@@ -55,6 +57,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       timelineProvider.refresh();
     }),
     vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration(CONFIG.locale)) {
+        applyLocaleFromConfig();
+        taskList.refresh();
+        statusBar.refresh();
+        timelineProvider.refresh();
+      }
       if (
         event.affectsConfiguration(CONFIG.includeOpenFiles) ||
         event.affectsConfiguration(CONFIG.includeChangedPaths)

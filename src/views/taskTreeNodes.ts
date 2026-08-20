@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import type { Task, TaskStatus } from '../types';
+import { statusLabel } from '../domain/stateMachine';
+import type { Task } from '../types';
 
 export class SectionItem extends vscode.TreeItem {
   readonly kind = 'section' as const;
@@ -76,19 +77,4 @@ function tooltipFor(task: Task): string {
     lines.push(task.lastContext.workspacePath);
   }
   return lines.join('\n');
-}
-
-export function statusLabel(status: TaskStatus): string {
-  switch (status) {
-    case 'not_started':
-      return '未开始';
-    case 'in_progress':
-      return '进行中';
-    case 'paused':
-      return '已暂停';
-    case 'completed':
-      return '已完成';
-    default:
-      return status;
-  }
 }

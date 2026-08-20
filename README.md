@@ -1,57 +1,63 @@
 # Crazy Universe
 
-VS Code / Cursor 扩展：管理多个开发任务上下文，并记录开发工作流
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-## 功能
+A VS Code / Cursor extension for managing multiple development task contexts and recording your workflow locally, privacy-first.
 
-- 任务分「当前任务 / 活动 / 已完成」；同时最多一件进行中
-- 开始 / 暂停 / 完成；已完成可恢复到活动（已暂停），不会自动开始
-- 按任务名称搜索；有关键字时只显示「搜索结果」，取消搜索后该分类消失
-- 用户主动标记（修改内容、问题、下一步计划等）；时间线按任务回顾
-- 状态变更与标记时采集只读快照：分支、正在看的文件、本任务期间的提交
-- 本任务期间提交默认展示 3 条，可「展开更多 / 收起」
-- 飞书id支持打开任务；无 ID 则 `#none`
+## Features
 
-## 启动
+- Tasks are grouped into **Current / Active / Completed**; at most one task can be in progress
+- Start / pause / complete; a completed task can be moved back to Active (paused) and is not started automatically
+- Search by task title; while a query is active only **Search results** is shown
+- Add notes (changes, issues, next steps, and more); review them on the per-task timeline
+- Read-only snapshots on status changes and notes: branch, file in view, and commits during this task
+- Commits during this task show 3 by default, with **Show more / Collapse**
+- Feishu IDs open the matching task; if none is found the UI shows `#none`
+- Switch the sidebar, prompts, and status bar between **English** and **中文** with the globe icon (left of search), or set `Crazy Universe: Locale`
 
-目前未上架扩展市场。需要 Node.js 20+。
+## Getting started
+
+Not listed on the marketplace yet. Requires Node.js 20+.
 
 ```bash
 npm install
 ```
 
-打开仓库，按 **F5**编译
+Open the repo and press **F5** to compile and launch the Extension Development Host.
 
-日常开发可另开终端：
+For day-to-day work, keep a watch build in another terminal:
 
 ```bash
 npm run watch
 ```
 
-改完代码后，在开发窗口执行 `Developer: Reload Window`
+After changing code, run **Developer: Reload Window** in the development window.
 
-改过 Webview（任务列表 / 时间线）时建议重新 F5，否则可能仍显示旧页面
+After changing a webview (task list / timeline), press **F5** again; otherwise the old page may still be shown.
 
-## 项目结构
+## Project layout
 
 ```text
 Crazy_Universe/
 ├── src/
-│   ├── extension.ts          # 入口
-│   ├── commands/             # 命令
-│   ├── domain/               # 状态机、TaskService
-│   ├── store/                # 本地 JSON
-│   ├── snapshot/             # 只读 Git 与打开文件
-│   ├── feishu/               # 飞书链接识别
-│   ├── views/                # 任务列表、时间线、状态栏
-│   └── webview/              # 任务列表 / 时间线 HTML
-├── resources/                # Activity Bar、状态、操作图标
-├── docs/                     # 产品 / 视觉 / 开发文档
+│   ├── extension.ts          # entry
+│   ├── i18n.ts               # English / 中文 strings
+│   ├── commands/             # commands
+│   ├── domain/               # state machine, TaskService
+│   ├── store/                # local JSON
+│   ├── snapshot/             # read-only Git and open files
+│   ├── feishu/               # Feishu link detection
+│   ├── views/                # task list, timeline, status bar
+│   └── webview/              # task list / timeline HTML
+├── resources/                # Activity Bar, status, and action icons
+├── docs/                     # product / visual / development docs
 ├── package.json
+├── package.nls.json          # English contributes strings
+├── package.nls.zh-cn.json    # Chinese contributes strings
 └── esbuild.js
 ```
 
-## 测试与打包
+## Test and package
 
 ```bash
 npm test
@@ -59,6 +65,6 @@ npm run lint
 npm run package
 ```
 
-## 问题反馈
+## Feedback
 
-请提 [Issues](https://github.com/Tqy43/Crazy_Universe/issues)。
+Please open [Issues](https://github.com/Tqy43/Crazy_Universe/issues).

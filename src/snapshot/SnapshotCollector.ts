@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import path from 'node:path';
 import { CONFIG } from '../constants';
+import { displayGitShort, t } from '../i18n';
 import type { AutoSnapshot, WorkContext } from '../types';
 import { GitReader, type GitReadOptions } from './GitReader';
 import { unavailableGitSummary } from './gitParse';
@@ -74,17 +75,17 @@ export function snapshotPreviewText(
   const bits = [
     snapshot.context.branch,
     snapshot.gitStatusSummary.available
-      ? snapshot.gitStatusSummary.shortText
+      ? displayGitShort(snapshot.gitStatusSummary.shortText)
       : snapshot.context.workspacePath
-        ? '未检测到 Git'
+        ? t('git.missing')
         : undefined,
     snapshot.recentCommits[0]?.hash,
   ].filter(Boolean);
-  let head = `将附带系统快照：${bits.join(' · ') || '当前工作区'}（系统采集）`;
+  let head = t('preview.prefix', { bits: bits.join(' · ') || t('preview.workspace') });
   if (!includeOpenFiles) {
-    head += '。已在设置中关闭打开文件采集';
+    head += t('preview.filesOff');
   } else if (snapshot.openFiles.length > 0) {
-    head += `。打开文件 ${snapshot.openFiles.length}`;
+    head += t('preview.openFiles', { count: snapshot.openFiles.length });
   }
   return head;
 }

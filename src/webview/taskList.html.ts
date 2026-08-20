@@ -217,7 +217,11 @@ export function renderTaskListShell(cspSource: string): { html: string } {
     const history = [];
     let historyIndex = -1;
     let collapsed = { completed: true };
-    let state = { searchOpen: false, searchNeedle: '', selectedTaskId: '', sections: [], empty: false };
+    let state = { searchOpen: false, searchNeedle: '', selectedTaskId: '', sections: [], empty: false, ui: {} };
+
+    function ui() {
+      return state.ui || {};
+    }
 
     function escapeHtml(value) {
       return String(value)
@@ -246,41 +250,43 @@ export function renderTaskListShell(cspSource: string): { html: string } {
     const iconDelete = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6 2h4l.5 1H13v1H3V3h3.5zm1 4h1v6H7zm3 0h1v6h-1zM4.5 4H12v9.5c0 .8-.7 1.5-1.5 1.5h-5c-.8 0-1.5-.7-1.5-1.5z"/></svg>';
 
     function actionsFor(status) {
+      const labels = ui();
       if (status === 'in_progress') {
-        return actionBtn('crazyUniverse.pauseTask', '暂停', iconPause) +
-          actionBtn('crazyUniverse.addNote', '添加标记', iconNote);
+        return actionBtn('crazyUniverse.pauseTask', labels.pause || '暂停', iconPause) +
+          actionBtn('crazyUniverse.addNote', labels.note || '添加标记', iconNote);
       }
       if (status === 'completed') {
-        return actionBtn('crazyUniverse.resumeTask', '恢复', iconResume);
+        return actionBtn('crazyUniverse.resumeTask', labels.resume || '恢复', iconResume);
       }
-      return actionBtn('crazyUniverse.startTask', '开始', iconPlay) +
-        actionBtn('crazyUniverse.addNote', '添加标记', iconNote);
+      return actionBtn('crazyUniverse.startTask', labels.start || '开始', iconPlay) +
+        actionBtn('crazyUniverse.addNote', labels.note || '添加标记', iconNote);
     }
 
     function menuItems(status) {
+      const labels = ui();
       if (status === 'in_progress') {
         return [
-          { command: 'crazyUniverse.pauseTask', label: '暂停', icon: iconPause },
-          { command: 'crazyUniverse.addNote', label: '添加标记', icon: iconNote },
-          { command: 'crazyUniverse.completeTask', label: '完成', icon: iconCheck },
-          { command: 'crazyUniverse.openTimeline', label: '打开时间线', icon: iconHistory },
-          { command: 'crazyUniverse.newTask', label: '新建任务', icon: iconAdd },
+          { command: 'crazyUniverse.pauseTask', label: labels.pause || '暂停', icon: iconPause },
+          { command: 'crazyUniverse.addNote', label: labels.note || '添加标记', icon: iconNote },
+          { command: 'crazyUniverse.completeTask', label: labels.complete || '完成', icon: iconCheck },
+          { command: 'crazyUniverse.openTimeline', label: labels.timeline || '打开时间线', icon: iconHistory },
+          { command: 'crazyUniverse.newTask', label: labels.newTask || '新建任务', icon: iconAdd },
         ];
       }
       const items = [];
       if (status === 'completed') {
-        items.push({ command: 'crazyUniverse.resumeTask', label: '恢复', icon: iconResume });
+        items.push({ command: 'crazyUniverse.resumeTask', label: labels.resume || '恢复', icon: iconResume });
       } else {
-        items.push({ command: 'crazyUniverse.startTask', label: '开始', icon: iconPlay });
+        items.push({ command: 'crazyUniverse.startTask', label: labels.start || '开始', icon: iconPlay });
         if (status === 'paused') {
-          items.push({ command: 'crazyUniverse.completeTask', label: '完成', icon: iconCheck });
+          items.push({ command: 'crazyUniverse.completeTask', label: labels.complete || '完成', icon: iconCheck });
         }
-        items.push({ command: 'crazyUniverse.addNote', label: '添加标记', icon: iconNote });
+        items.push({ command: 'crazyUniverse.addNote', label: labels.note || '添加标记', icon: iconNote });
       }
       items.push(
-        { command: 'crazyUniverse.openTimeline', label: '打开时间线', icon: iconHistory },
-        { command: 'crazyUniverse.renameTask', label: '重命名任务', icon: iconRename },
-        { command: 'crazyUniverse.deleteTask', label: '删除任务', icon: iconDelete },
+        { command: 'crazyUniverse.openTimeline', label: labels.timeline || '打开时间线', icon: iconHistory },
+        { command: 'crazyUniverse.renameTask', label: labels.rename || '重命名任务', icon: iconRename },
+        { command: 'crazyUniverse.deleteTask', label: labels.delete || '删除任务', icon: iconDelete },
       );
       return items;
     }
@@ -309,14 +315,27 @@ export function renderTaskListShell(cspSource: string): { html: string } {
       menuEl.style.top = top + 'px';
     }
 
+    function applyUi(next) {
+      if (!next) {
+        return;
+      }
+      document.documentElement.lang = next.lang || 'zh-CN';
+      document.title = next.viewTitle || document.title;
+      inputEl.placeholder = next.searchPlaceholder || inputEl.placeholder;
+      document.getElementById('close').title = next.close || '';
+    }
+
     function render() {
+      applyUi(ui());
       searchEl.classList.toggle('open', !!state.searchOpen);
       if (state.searchOpen && inputEl.value !== (state.searchNeedle || '')) {
         inputEl.value = state.searchNeedle || '';
       }
       if (state.empty) {
-        treeEl.innerHTML = '<div class="hint">管理多个开发任务上下文，并记录开发工作流。</div>' +
-          '<button class="empty-action" type="button" data-run="crazyUniverse.newTask">＋ 新建任务</button>';
+        const labels = ui();
+        treeEl.innerHTML = '<div class="hint">' + escapeHtml(labels.emptyHint || '') + '</div>' +
+          '<button class="empty-action" type="button" data-run="crazyUniverse.newTask">' +
+          escapeHtml(labels.newTaskPlus || labels.newTask || '') + '</button>';
         return;
       }
       treeEl.innerHTML = (state.sections || []).map((section) => {

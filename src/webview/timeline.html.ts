@@ -259,8 +259,8 @@ export function renderTimelineShell(): { html: string } {
       <div id="feed" class="feed"></div>
       <p id="error" class="error hidden"></p>
       <div id="composer" class="composer hidden">
-        <h2>添加标记 <button class="copy" id="collapse" type="button">收起</button></h2>
-        <label for="kind">类型</label>
+        <h2><span id="composerTitle">添加标记</span> <button class="copy" id="collapse" type="button">收起</button></h2>
+        <label for="kind" id="kindLabel">类型</label>
         <select id="kind">
           <option value="change">修改内容</option>
           <option value="action">关键操作</option>
@@ -270,7 +270,7 @@ export function renderTimelineShell(): { html: string } {
           <option value="next">下一步计划</option>
           <option value="other" selected>其他</option>
         </select>
-        <label for="body">正文</label>
+        <label for="body" id="bodyLabel">正文</label>
         <textarea id="body" placeholder="记下修改意图、问题或下一步"></textarea>
         <div id="preview" class="preview"></div>
         <div class="composer-actions">
@@ -291,6 +291,38 @@ export function renderTimelineShell(): { html: string } {
     const errorEl = document.getElementById('error');
     const gitHintEl = document.getElementById('gitHint');
     const gitHintTextEl = document.getElementById('gitHintText');
+    let ui = {};
+
+    function applyUi(next) {
+      if (!next) {
+        return;
+      }
+      ui = next;
+      document.documentElement.lang = next.lang || 'zh-CN';
+      document.title = next.timelineTitle || document.title;
+      document.getElementById('dismissGit').textContent = next.close || '';
+      document.getElementById('composerTitle').textContent = next.addNote || '';
+      document.getElementById('collapse').textContent = next.collapse || '';
+      document.getElementById('kindLabel').textContent = next.kind || '';
+      document.getElementById('bodyLabel').textContent = next.body || '';
+      document.getElementById('body').placeholder = next.bodyPlaceholder || '';
+      document.getElementById('cancel').textContent = next.cancel || '';
+      document.getElementById('save').textContent = next.saveNote || '';
+      const kindMap = {
+        change: next.noteChange,
+        action: next.noteAction,
+        test: next.noteTest,
+        commit: next.noteCommit,
+        issue: next.noteIssue,
+        next: next.noteNext,
+        other: next.noteOther,
+      };
+      Array.from(kindEl.options).forEach((option) => {
+        if (kindMap[option.value]) {
+          option.textContent = kindMap[option.value];
+        }
+      });
+    }
 
     function showError(message) {
       errorEl.textContent = message || '';
@@ -322,7 +354,8 @@ export function renderTimelineShell(): { html: string } {
             escapeHtml(commit.feishuHref) + '">' + escapeHtml(commit.feishuText) + '</button>'
           : '<span class="feishu-muted">' + escapeHtml(commit.feishuText) + '</span>';
         const toggle = commit.subject
-          ? '<button class="commit-toggle" type="button" data-toggle-msg="1" title="展开说明"></button>'
+          ? '<button class="commit-toggle" type="button" data-toggle-msg="1" title="' +
+            escapeHtml(ui.expandMessage || '') + '"></button>'
           : '';
         return '<li class="commit' + hidden + '">' +
           '<div class="commit-head"><span class="commit-hash">' + escapeHtml(commit.hash) +
@@ -330,14 +363,15 @@ export function renderTimelineShell(): { html: string } {
           '<div class="commit-msg">' + escapeHtml(commit.subject) + '</div></li>';
       }).join('');
       const more = commits && commits.length > DISPLAY_COMMITS
-        ? '<button class="commit-more" type="button" data-toggle-commits="1">展开更多</button>'
+        ? '<button class="commit-more" type="button" data-toggle-commits="1">' +
+          escapeHtml(ui.showMore || '') + '</button>'
         : '';
       return '<ul class="commits">' + items + '</ul>' + more;
     }
 
     function renderRows(rows) {
       if (!rows.length) {
-        feedEl.innerHTML = '<p class="meta">没有符合筛选的事件。</p>';
+        feedEl.innerHTML = '<p class="meta">' + escapeHtml(ui.noEvents || '') + '</p>';
         return;
       }
       feedEl.innerHTML = rows.map((row) => {
@@ -365,7 +399,7 @@ export function renderTimelineShell(): { html: string } {
           return '<dt>' + escapeHtml(item.label) + '</dt><dd>' + value + '</dd>';
         }).join('');
         const snap = details
-          ? '<details class="snap"><summary>' + escapeHtml(row.snapshotSummary || '快照') +
+          ? '<details class="snap"><summary>' + escapeHtml(row.snapshotSummary || ui.snapshot || '') +
             '</summary><dl>' + details + '</dl></details>'
           : row.snapshotSummary
             ? '<div class="snap snap-static">' + escapeHtml(row.snapshotSummary) + '</div>'
@@ -392,6 +426,7 @@ export function renderTimelineShell(): { html: string } {
       }
       if (message.type !== 'state') return;
       const state = message.payload;
+      applyUi(state.ui);
       showError('');
       if (state.empty) {
         emptyEl.textContent = state.emptyMessage;
@@ -434,7 +469,7 @@ export function renderTimelineShell(): { html: string } {
         const dd = moreEl.closest('dd');
         if (dd) {
           const expanded = dd.classList.toggle('commits-expanded');
-          moreEl.textContent = expanded ? '收起' : '展开更多';
+          moreEl.textContent = expanded ? (ui.collapse || '') : (ui.showMore || '');
         }
         return;
       }

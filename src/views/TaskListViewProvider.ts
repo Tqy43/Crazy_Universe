@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { CONTEXT } from '../constants';
+import { t, webviewUi } from '../i18n';
 import type { Task } from '../types';
 import type { TaskStore } from '../store/TaskStore';
 import { describeTask } from './taskTreeNodes';
@@ -30,6 +31,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       void this.onMessage(message);
     });
     webviewView.webview.html = renderTaskListShell(webviewView.webview.cspSource).html;
+    webviewView.title = t('view.tasks');
     this.syncBadge();
   }
 
@@ -66,6 +68,9 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
   refresh(): void {
     if (this.selectedTaskId && !this.store.getTask(this.selectedTaskId)) {
       this.selectTask(undefined);
+    }
+    if (this.view) {
+      this.view.title = t('view.tasks');
     }
     this.syncBadge();
     this.pushState();
@@ -134,6 +139,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         selectedTaskId: this.selectedTaskId ?? '',
         empty: tasks.length === 0,
         sections: this.sections(tasks),
+        ui: webviewUi(),
       },
     });
     this.focusSearch = false;
@@ -150,9 +156,9 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       return [
         {
           id: 'search',
-          title: '搜索结果',
+          title: t('section.search'),
           items: hits.length > 0 ? hits.map((task) => this.item(task)) : [
-            { placeholder: true, title: '没有匹配的任务' },
+            { placeholder: true, title: t('empty.noMatch') },
           ],
         },
       ];
@@ -161,19 +167,19 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     return [
       {
         id: 'current',
-        title: '当前任务',
+        title: t('section.current'),
         items: current
           ? [this.item(current)]
-          : [{ placeholder: true, title: '没有进行中的任务' }],
+          : [{ placeholder: true, title: t('empty.noInProgress') }],
       },
       {
         id: 'active',
-        title: '活动',
+        title: t('section.active'),
         items: activeTasks(tasks).map((task) => this.item(task)),
       },
       {
         id: 'completed',
-        title: '已完成',
+        title: t('section.completed'),
         items: completedTasks(tasks).map((task) => this.item(task)),
       },
     ];
@@ -199,7 +205,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     }
     const current = this.store.getTasks().find((task) => task.status === 'in_progress');
     this.view.badge = current
-      ? { tooltip: `进行中：${current.title}`, value: 1 }
+      ? { tooltip: t('badge.inProgress', { title: current.title }), value: 1 }
       : undefined;
   }
 }

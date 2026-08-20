@@ -15,6 +15,7 @@ export const COMMANDS = {
   openTimeline: 'crazyUniverse.openTimeline',
   focus: 'crazyUniverse.focus',
   filterTasks: 'crazyUniverse.filterTasks',
+  toggleLanguage: 'crazyUniverse.toggleLanguage',
   filterTimeline: 'crazyUniverse.filterTimeline',
   deleteTask: 'crazyUniverse.deleteTask',
   renameTask: 'crazyUniverse.renameTask',
@@ -31,6 +32,7 @@ export const CONTEXT = {
 export const CONFIG = {
   includeOpenFiles: 'crazyUniverse.snapshot.includeOpenFiles',
   includeChangedPaths: 'crazyUniverse.snapshot.includeChangedPaths',
+  locale: 'crazyUniverse.locale',
 } as const;
 
 export const OUTPUT_CHANNEL = 'Crazy Universe';

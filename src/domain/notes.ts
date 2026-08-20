@@ -1,15 +1,30 @@
 import type { NoteKind } from '../types';
+import { t, type MessageKey } from '../i18n';
 
-export const NOTE_KINDS: ReadonlyArray<{ id: NoteKind; label: string }> = [
-  { id: 'change', label: '修改内容' },
-  { id: 'action', label: '关键操作' },
-  { id: 'test', label: '测试结果' },
-  { id: 'commit', label: '提交信息' },
-  { id: 'issue', label: '遇到的问题' },
-  { id: 'next', label: '下一步计划' },
-  { id: 'other', label: '其他' },
+export const NOTE_KIND_IDS: readonly NoteKind[] = [
+  'change',
+  'action',
+  'test',
+  'commit',
+  'issue',
+  'next',
+  'other',
 ];
 
+const NOTE_KEYS: Record<NoteKind, MessageKey> = {
+  change: 'note.change',
+  action: 'note.action',
+  test: 'note.test',
+  commit: 'note.commit',
+  issue: 'note.issue',
+  next: 'note.next',
+  other: 'note.other',
+};
+
+export function noteKinds(): ReadonlyArray<{ id: NoteKind; label: string }> {
+  return NOTE_KIND_IDS.map((id) => ({ id, label: t(NOTE_KEYS[id]) }));
+}
+
 export function noteKindLabel(kind?: NoteKind): string {
-  return NOTE_KINDS.find((item) => item.id === kind)?.label ?? '其他';
+  return t(kind ? NOTE_KEYS[kind] : 'note.other');
 }

@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { COMMANDS, VIEWS } from '../constants';
-import { NOTE_KINDS } from '../domain/notes';
+import { COMMANDS, CONFIG, VIEWS } from '../constants';
+import { noteKinds } from '../domain/notes';
 import { IllegalTransitionError } from '../domain/stateMachine';
 import type { TaskService } from '../domain/TaskService';
+import { getLocale, resolveLocale, setLocale, t } from '../i18n';
 import type { TaskStore } from '../store/TaskStore';
 import type { TaskListViewProvider } from '../views/TaskListViewProvider';
 import type { TimelineViewProvider } from '../views/TimelineViewProvider';
@@ -22,10 +23,10 @@ export function registerCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMANDS.newTask, async () => {
       const title = await vscode.window.showInputBox({
-        prompt: '任务标题',
-        placeHolder: '例如：实现登录页',
+        prompt: t('prompt.title'),
+        placeHolder: t('prompt.titlePlaceholder'),
         ignoreFocusOut: false,
-        validateInput: (value) => (value.trim() ? undefined : '请输入标题'),
+        validateInput: (value) => (value.trim() ? undefined : t('prompt.titleRequired')),
       });
       if (title === undefined) {
         return;
@@ -35,25 +36,25 @@ export function registerCommands(
         await delay(50);
         await taskList.reveal(task.id);
       } catch (error) {
-        showError('创建任务失败', error);
+        showError(t('error.create'), error);
       }
     }),
     vscode.commands.registerCommand(COMMANDS.renameTask, async (item?: unknown) => {
       const taskId = resolveTaskId(taskList, item);
       if (!taskId) {
-        void vscode.window.showWarningMessage('请先选中一个任务。');
+        void vscode.window.showWarningMessage(t('warn.selectTask'));
         return;
       }
       const current = store.getTask(taskId);
       if (!current) {
-        void vscode.window.showWarningMessage('任务不存在。');
+        void vscode.window.showWarningMessage(t('warn.missingTask'));
         return;
       }
       const title = await vscode.window.showInputBox({
-        prompt: '重命名任务',
+        prompt: t('prompt.rename'),
         value: current.title,
         ignoreFocusOut: false,
-        validateInput: (value) => (value.trim() ? undefined : '请输入标题'),
+        validateInput: (value) => (value.trim() ? undefined : t('prompt.titleRequired')),
       });
       if (title === undefined) {
         return;
@@ -63,47 +64,49 @@ export function registerCommands(
         await delay(50);
         await taskList.reveal(taskId);
       } catch (error) {
-        showError('重命名失败', error);
+        showError(t('error.rename'), error);
       }
     }),
     vscode.commands.registerCommand(COMMANDS.deleteTask, async (item?: unknown) => {
       const taskId = resolveTaskId(taskList, item);
       if (!taskId) {
-        void vscode.window.showWarningMessage('请先选中一个任务。');
+        void vscode.window.showWarningMessage(t('warn.selectTask'));
         return;
       }
       const current = store.getTask(taskId);
       if (!current) {
-        void vscode.window.showWarningMessage('任务不存在。');
+        void vscode.window.showWarningMessage(t('warn.missingTask'));
         return;
       }
+      const deleteAction = t('confirm.deleteAction');
       const confirmed = await vscode.window.showWarningMessage(
-        `删除任务「${current.title}」？此操作仅在本机生效，且不可撤销。`,
+        t('confirm.delete', { title: current.title }),
         { modal: true },
-        '删除',
+        deleteAction,
       );
-      if (confirmed !== '删除') {
+      if (confirmed !== deleteAction) {
         return;
       }
       try {
         await service.delete(taskId);
       } catch (error) {
-        showError('删除失败', error);
+        showError(t('error.delete'), error);
       }
     }),
     vscode.commands.registerCommand(COMMANDS.filterTasks, () => taskList.toggleSearch()),
+    vscode.commands.registerCommand(COMMANDS.toggleLanguage, () => pickLanguage()),
     vscode.commands.registerCommand(COMMANDS.filterTimeline, () => timelineProvider.pickFilter()),
     vscode.commands.registerCommand(COMMANDS.startTask, async (item?: unknown) => {
       const taskId = resolveTaskId(taskList, item);
       if (!taskId) {
-        void vscode.window.showWarningMessage('请先选中一个任务。');
+        void vscode.window.showWarningMessage(t('warn.selectTask'));
         return;
       }
-      await runLifecycle(store, taskList, taskId, '开始任务失败', async (task) => {
+      await runLifecycle(store, taskList, taskId, t('error.start'), async (task) => {
         const { pausedTitle } = await service.start(task.id);
         if (pausedTitle) {
           void vscode.window.showInformationMessage(
-            `已暂停「${pausedTitle}」，并开始「${task.title}」。`,
+            t('info.pausedAndStarted', { paused: pausedTitle, started: task.title }),
           );
         }
       });
@@ -113,91 +116,91 @@ export function registerCommands(
         resolveTaskId(taskList, item) ??
         store.getTasks().find((task) => task.status === 'in_progress')?.id;
       if (!taskId) {
-        void vscode.window.showWarningMessage('请先开始一个任务。');
+        void vscode.window.showWarningMessage(t('warn.startFirst'));
         return;
       }
       const current = store.getTask(taskId);
       if (!current) {
-        void vscode.window.showWarningMessage('任务不存在。');
+        void vscode.window.showWarningMessage(t('warn.missingTask'));
         return;
       }
       if (current.status !== 'in_progress') {
-        void vscode.window.showWarningMessage('只有进行中的任务可以暂停。');
+        void vscode.window.showWarningMessage(t('warn.pauseOnlyActive'));
         return;
       }
-      const nextPlan = await skippableInput('下一步计划（可跳过）', '回来后第一件要做的事');
-      await runLifecycle(store, taskList, taskId, '暂停任务失败', () =>
+      const nextPlan = await skippableInput(t('prompt.nextPlan'), t('prompt.nextPlanPlaceholder'));
+      await runLifecycle(store, taskList, taskId, t('error.pause'), () =>
         service.pause(taskId, nextPlan),
       );
     }),
     vscode.commands.registerCommand(COMMANDS.resumeTask, async (item?: unknown) => {
       const taskId = resolveTaskId(taskList, item);
       if (!taskId) {
-        void vscode.window.showWarningMessage('请先选中一个已完成的任务。');
+        void vscode.window.showWarningMessage(t('warn.selectCompleted'));
         return;
       }
       const current = store.getTask(taskId);
       if (!current) {
-        void vscode.window.showWarningMessage('任务不存在。');
+        void vscode.window.showWarningMessage(t('warn.missingTask'));
         return;
       }
       if (current.status !== 'completed') {
-        void vscode.window.showWarningMessage('只有已完成的任务可以恢复到活动列表。已暂停的任务请直接开始。');
+        void vscode.window.showWarningMessage(t('warn.resumeOnlyCompleted'));
         return;
       }
-      await runLifecycle(store, taskList, taskId, '恢复任务失败', async (task) => {
+      await runLifecycle(store, taskList, taskId, t('error.resume'), async (task) => {
         await service.resume(task.id);
-        void vscode.window.showInformationMessage(`已将「${task.title}」恢复到活动任务。`);
+        void vscode.window.showInformationMessage(t('info.resumed', { title: task.title }));
       });
     }),
     vscode.commands.registerCommand(COMMANDS.completeTask, async (item?: unknown) => {
       const taskId = resolveTaskId(taskList, item);
       if (!taskId) {
-        void vscode.window.showWarningMessage('请先选中一个任务。');
+        void vscode.window.showWarningMessage(t('warn.selectTask'));
         return;
       }
       const current = store.getTask(taskId);
       if (!current) {
-        void vscode.window.showWarningMessage('任务不存在。');
+        void vscode.window.showWarningMessage(t('warn.missingTask'));
         return;
       }
       if (current.status !== 'in_progress' && current.status !== 'paused') {
-        void vscode.window.showWarningMessage('未开始的任务无法完成。');
+        void vscode.window.showWarningMessage(t('warn.completeNeedStart'));
         return;
       }
-      const comment = await skippableInput('完成说明（可跳过）');
-      await runLifecycle(store, taskList, taskId, '完成任务失败', () =>
+      const comment = await skippableInput(t('prompt.completeNote'));
+      await runLifecycle(store, taskList, taskId, t('error.complete'), () =>
         service.complete(taskId, comment),
       );
     }),
     vscode.commands.registerCommand(COMMANDS.addNote, async (item?: unknown) => {
       const taskId = resolveTaskId(taskList, item);
       if (!taskId) {
-        void vscode.window.showWarningMessage('请先选中一个任务。');
+        void vscode.window.showWarningMessage(t('warn.selectTask'));
         return;
       }
       const current = store.getTask(taskId);
       if (!current) {
-        void vscode.window.showWarningMessage('任务不存在。');
+        void vscode.window.showWarningMessage(t('warn.missingTask'));
         return;
       }
       if (current.status === 'completed') {
-        void vscode.window.showWarningMessage('已完成任务请先恢复到活动再添加标记。');
+        void vscode.window.showWarningMessage(t('warn.noteNeedActive'));
         return;
       }
       const picked = await vscode.window.showQuickPick(
-        NOTE_KINDS.map((item) => ({
+        noteKinds().map((item) => ({
           label: item.label,
           noteKind: item.id,
         })),
-        { placeHolder: '选择标记类型', ignoreFocusOut: true },
+        { placeHolder: t('prompt.noteKind'), ignoreFocusOut: true },
       );
       if (!picked) {
         return;
       }
       const body = await vscode.window.showInputBox({
-        prompt: '标记正文',
-        placeHolder: '记下修改意图、问题或下一步',
+        prompt: t('prompt.noteBody'),
+        placeHolder: t('timeline.bodyPlaceholder'),
         ignoreFocusOut: true,
       });
       if (body === undefined) {
@@ -209,7 +212,7 @@ export function registerCommands(
         await taskList.reveal(taskId);
         await vscode.commands.executeCommand(`${VIEWS.timeline}.focus`);
       } catch (error) {
-        showError('添加标记失败', error);
+        showError(t('error.note'), error);
       }
     }),
     vscode.commands.registerCommand(COMMANDS.openTimeline, async (item?: unknown) => {
@@ -227,13 +230,13 @@ export function registerCommands(
       if (current) {
         const picked = await vscode.window.showQuickPick(
           [
-            { label: '$(debug-pause) 暂停', action: 'pause' as const },
-            { label: '$(note) 添加标记', action: 'note' as const },
-            { label: '$(check) 完成', action: 'complete' as const },
-            { label: '$(history) 打开时间线', action: 'timeline' as const },
-            { label: '$(add) 新建任务', action: 'new' as const },
+            { label: `$(debug-pause) ${t('action.pause')}`, action: 'pause' as const },
+            { label: `$(note) ${t('action.note')}`, action: 'note' as const },
+            { label: `$(check) ${t('action.complete')}`, action: 'complete' as const },
+            { label: `$(history) ${t('action.timeline')}`, action: 'timeline' as const },
+            { label: `$(add) ${t('action.new')}`, action: 'new' as const },
           ],
-          { placeHolder: `${current.title} · 进行中` },
+          { placeHolder: t('statusBar.pickActive', { title: current.title }) },
         );
         if (!picked) {
           return;
@@ -265,19 +268,19 @@ export function registerCommands(
         [
           ...paused.map((task) => ({
             label: task.title,
-            description: '已暂停',
+            description: t('status.paused'),
             action: 'start' as const,
             task,
           })),
           ...notStarted.map((task) => ({
             label: task.title,
-            description: '未开始',
+            description: t('status.not_started'),
             action: 'start' as const,
             task,
           })),
-          { label: '$(add) 新建任务', description: '', action: 'new' as const, task: undefined },
+          { label: `$(add) ${t('action.new')}`, description: '', action: 'new' as const, task: undefined },
         ],
-        { placeHolder: '开始一个任务' },
+        { placeHolder: t('statusBar.pickStart') },
       );
       if (!picked) {
         return;
@@ -291,6 +294,26 @@ export function registerCommands(
   );
 }
 
+async function pickLanguage(): Promise<void> {
+  const current = getLocale();
+  const picked = await vscode.window.showQuickPick(
+    [
+      { label: t('language.en'), locale: 'en' as const, picked: current === 'en' },
+      { label: t('language.zh'), locale: 'zh-cn' as const, picked: current === 'zh-cn' },
+    ],
+    { placeHolder: t('language.pick'), ignoreFocusOut: false },
+  );
+  if (!picked) {
+    return;
+  }
+  await vscode.workspace.getConfiguration().update(CONFIG.locale, picked.locale, vscode.ConfigurationTarget.Global);
+}
+
+export function applyLocaleFromConfig(): void {
+  const pref = vscode.workspace.getConfiguration().get<string>(CONFIG.locale, 'auto');
+  setLocale(resolveLocale(pref, vscode.env.language));
+}
+
 async function runLifecycle(
   store: TaskStore,
   taskList: TaskListViewProvider,
@@ -300,7 +323,7 @@ async function runLifecycle(
 ): Promise<void> {
   const task = store.getTask(taskId);
   if (!task) {
-    void vscode.window.showWarningMessage('任务不存在。');
+    void vscode.window.showWarningMessage(t('warn.missingTask'));
     return;
   }
   try {
@@ -344,5 +367,6 @@ function delay(ms: number): Promise<void> {
 
 function showError(prefix: string, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
-  void vscode.window.showErrorMessage(`${prefix}：${message}`);
+  const sep = getLocale() === 'en' ? ': ' : '：';
+  void vscode.window.showErrorMessage(`${prefix}${sep}${message}`);
 }

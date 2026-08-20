@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Event } from '../types';
+import { setLocale } from '../i18n';
 import {
   buildTimelineRows,
   filterEvents,
@@ -190,4 +191,54 @@ test('提交列表带总数、飞书 ID，不截断数据也不提示还有 n �
 test('没有快照时不再单独显示飞书', () => {
   const none = snapshotDetails(undefined, { includeOpenFiles: false, includeChangedPaths: false }, 'note.added');
   assert.deepEqual(none, []);
+});
+
+test('英文界面下快照标签切换', () => {
+  setLocale('en');
+  try {
+    const details = snapshotDetails(
+      {
+        context: {
+          workspacePath: 'D:\\work\\demo',
+          projectName: 'demo',
+          recordedAt: '2026-08-20T01:00:00.000Z',
+        },
+        openFiles: [],
+        activeFile: 'D:\\work\\demo\\src\\a.ts',
+        gitStatusSummary: {
+          available: true,
+          dirty: false,
+          stagedCount: 0,
+          unstagedCount: 0,
+          untrackedCount: 0,
+          shortText: '干净',
+        },
+        recentCommits: [],
+      },
+      { includeOpenFiles: true, includeChangedPaths: true },
+      'task.paused',
+    );
+    assert.equal(details.find((item) => item.label === 'File in view')?.files?.[0]?.label, 'a.ts');
+    assert.equal(details.find((item) => item.label === 'Commits during this task (0)')?.value, 'No new commits since this start');
+    assert.equal(snapshotSummaryLine({
+      context: {
+        workspacePath: 'D:\\work\\demo',
+        projectName: 'demo',
+        branch: 'main',
+        recordedAt: '2026-08-20T01:00:00.000Z',
+      },
+      openFiles: [],
+      gitStatusSummary: {
+        available: true,
+        dirty: false,
+        stagedCount: 0,
+        unstagedCount: 0,
+        untrackedCount: 0,
+        shortText: '干净',
+      },
+      recentCommits: [],
+    }), 'main · Clean');
+  } finally {
+    setLocale('zh-cn');
+  }
 });
