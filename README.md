@@ -15,9 +15,13 @@ A VS Code / Cursor extension for managing multiple development task contexts and
 - Feishu IDs open the matching task; if none is found the UI shows `#none`
 - Switch the sidebar, prompts, and status bar between **English** and **中文** with the globe icon (left of search), or set `Crazy Universe: Locale`
 
-## Getting started
+## Install
 
-Not listed on the marketplace yet. Requires Node.js 20+.
+Install [Crazy Universe](https://marketplace.visualstudio.com/items?itemName=CrazyUniverse.crazy-universe) from the Visual Studio Marketplace, or search **Crazy Universe** in the VS Code / Cursor Extensions view.
+
+## Development
+
+Clone this repo. Requires Node.js 20+.
 
 ```bash
 npm install

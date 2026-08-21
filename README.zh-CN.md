@@ -15,9 +15,13 @@ VS Code / Cursor 扩展：管理多个开发任务上下文，并记录开发工
 - 飞书 ID 支持打开任务；无 ID 则 `#none`
 - 任务列表标题栏搜索左侧的地球图标可切换 **英语 / 中文**（侧栏、提示框、状态栏）；也可在设置里改 `Crazy Universe: Locale`
 
-## 启动
+## 安装
 
-目前未上架扩展市场。需要 Node.js 20+。
+在 [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=CrazyUniverse.crazy-universe) 安装 Crazy Universe，或在 VS Code / Cursor 的扩展视图中搜索 **Crazy Universe**。
+
+## 本地开发
+
+克隆本仓库。需要 Node.js 20+。
 
 ```bash
 npm install
