@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CONTEXT } from '../constants';
+import { CONTEXT, CONFIG } from '../constants';
 import { t, webviewUi } from '../i18n';
 import type { Task } from '../types';
 import type { TaskStore } from '../store/TaskStore';
@@ -59,6 +59,16 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     this.pushState();
   }
 
+  async setWorklog(next: { visible?: boolean; running?: boolean }): Promise<void> {
+    const config = vscode.workspace.getConfiguration();
+    if (next.visible !== undefined) {
+      await config.update(CONFIG.worklogEnabled, next.visible, vscode.ConfigurationTarget.Global);
+    }
+    if (next.running !== undefined) {
+      await config.update(CONFIG.worklogRunning, next.running, vscode.ConfigurationTarget.Global);
+    }
+  }
+
   async reveal(taskId: string): Promise<void> {
     this.selectTask(taskId);
     this.pushState();
@@ -93,6 +103,21 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       case 'closeSearch':
         this.closeSearch();
         return;
+      case 'tool': {
+        const id = String(payload.id ?? '');
+        const action = String(payload.action ?? '');
+        if (id !== 'worklog') {
+          return;
+        }
+        if (action === 'start') {
+          await this.setWorklog({ visible: true, running: true });
+        } else if (action === 'end') {
+          await this.setWorklog({ visible: true, running: false });
+        } else if (action === 'hide') {
+          await this.setWorklog({ visible: false, running: false });
+        }
+        return;
+      }
       case 'select':
         this.selectTask(String(payload.taskId ?? '') || undefined);
         this.pushState();
@@ -137,7 +162,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         searchNeedle: this.searchNeedle,
         focusSearch: this.focusSearch,
         selectedTaskId: this.selectedTaskId ?? '',
-        empty: tasks.length === 0,
+        empty: tasks.length === 0 && !this.worklogVisible(),
         sections: this.sections(tasks),
         ui: webviewUi(),
       },
@@ -147,17 +172,22 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
   private sections(tasks: Task[]) {
     const needle = this.searchOpen ? this.searchNeedle.trim().toLowerCase() : '';
+    const toolItems = this.toolItems(needle);
     if (needle) {
       const hits = [
         ...tasks.filter((task) => task.status === 'in_progress'),
         ...activeTasks(tasks),
         ...completedTasks(tasks),
       ].filter((task) => task.title.toLowerCase().includes(needle));
+      const items = [
+        ...hits.map((task) => this.item(task)),
+        ...toolItems,
+      ];
       return [
         {
           id: 'search',
           title: t('section.search'),
-          items: hits.length > 0 ? hits.map((task) => this.item(task)) : [
+          items: items.length > 0 ? items : [
             { placeholder: true, title: t('empty.noMatch') },
           ],
         },
@@ -165,6 +195,11 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     }
     const current = tasks.find((task) => task.status === 'in_progress');
     return [
+      {
+        id: 'tools',
+        title: t('section.tools'),
+        items: toolItems.length > 0 ? toolItems : [{ placeholder: true, title: t('empty.noTools') }],
+      },
       {
         id: 'current',
         title: t('section.current'),
@@ -183,6 +218,37 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         items: completedTasks(tasks).map((task) => this.item(task)),
       },
     ];
+  }
+
+  private toolItems(needle: string) {
+    if (!this.worklogVisible()) {
+      return [];
+    }
+    const title = t('tools.bar');
+    if (needle && !title.toLowerCase().includes(needle) && !t('tools.worklog').toLowerCase().includes(needle)) {
+      return [];
+    }
+    const running = this.worklogRunning();
+    return [
+      {
+        id: 'worklog',
+        kind: 'tool' as const,
+        title,
+        description: running ? t('tools.running') : t('tools.stopped'),
+        status: running ? 'running' : 'stopped',
+      },
+    ];
+  }
+
+  private worklogVisible(): boolean {
+    return vscode.workspace.getConfiguration().get<boolean>(CONFIG.worklogEnabled, false);
+  }
+
+  private worklogRunning(): boolean {
+    if (!this.worklogVisible()) {
+      return false;
+    }
+    return vscode.workspace.getConfiguration().get<boolean>(CONFIG.worklogRunning, true);
   }
 
   private item(task: Task) {

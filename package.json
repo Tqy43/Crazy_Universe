@@ -2,7 +2,7 @@
   "name": "crazy-universe",
   "displayName": "Crazy Universe",
   "description": "%extension.description%",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "publisher": "CrazyUniverse",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -113,6 +113,15 @@
         }
       },
       {
+        "command": "crazyUniverse.openTools",
+        "title": "%command.openTools%",
+        "category": "Crazy Universe",
+        "icon": {
+          "light": "resources/action-tools.svg",
+          "dark": "resources/action-tools-dark.svg"
+        }
+      },
+      {
         "command": "crazyUniverse.filterTimeline",
         "title": "%command.filterTimeline%",
         "category": "Crazy Universe",
@@ -184,14 +193,19 @@
           "group": "navigation@0"
         },
         {
-          "command": "crazyUniverse.filterTasks",
+          "command": "crazyUniverse.openTools",
           "when": "view == crazyUniverse.tasks",
           "group": "navigation@1"
         },
         {
-          "command": "crazyUniverse.newTask",
+          "command": "crazyUniverse.filterTasks",
           "when": "view == crazyUniverse.tasks",
           "group": "navigation@2"
+        },
+        {
+          "command": "crazyUniverse.newTask",
+          "when": "view == crazyUniverse.tasks",
+          "group": "navigation@3"
         },
         {
           "command": "crazyUniverse.filterTimeline",
@@ -228,6 +242,16 @@
           ],
           "default": "auto",
           "description": "%config.locale%"
+        },
+        "crazyUniverse.worklog.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.worklog.enabled%"
+        },
+        "crazyUniverse.worklog.running": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.worklog.running%"
         }
       }
     }

@@ -19,4 +19,10 @@ test('英文下翻译 git 摘要', () => {
     setLocale('zh-cn');
   }
   assert.equal(t('view.tasks'), '任务');
+  assert.equal(t('tools.enable'), '打开此处');
+  assert.equal(t('tools.bar'), '工时管理（自制）');
+  assert.equal(t('tools.pick'), '工具');
+  assert.equal(t('section.tools'), 'Tools');
+  assert.equal(t('tools.running'), '使用中');
+  assert.equal(t('tools.use'), '使用');
 });

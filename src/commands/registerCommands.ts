@@ -94,6 +94,7 @@ export function registerCommands(
       }
     }),
     vscode.commands.registerCommand(COMMANDS.filterTasks, () => taskList.toggleSearch()),
+    vscode.commands.registerCommand(COMMANDS.openTools, () => pickTools(taskList)),
     vscode.commands.registerCommand(COMMANDS.toggleLanguage, () => pickLanguage()),
     vscode.commands.registerCommand(COMMANDS.filterTimeline, () => timelineProvider.pickFilter()),
     vscode.commands.registerCommand(COMMANDS.startTask, async (item?: unknown) => {
@@ -292,6 +293,27 @@ export function registerCommands(
       await vscode.commands.executeCommand(COMMANDS.startTask, { kind: 'task', task: picked.task });
     }),
   );
+}
+
+async function pickTools(taskList: TaskListViewProvider): Promise<void> {
+  const visible = vscode.workspace.getConfiguration().get<boolean>(CONFIG.worklogEnabled, false);
+  const picked = await vscode.window.showQuickPick(
+    [
+      {
+        label: t('tools.worklog'),
+        description: t('tools.bar'),
+        picked: visible,
+        id: 'worklog' as const,
+      },
+    ],
+    { placeHolder: t('tools.pick'), ignoreFocusOut: false },
+  );
+  if (!picked) {
+    return;
+  }
+  if (picked.id === 'worklog') {
+    await taskList.setWorklog({ visible: true, running: true });
+  }
 }
 
 async function pickLanguage(): Promise<void> {

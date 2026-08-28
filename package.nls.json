@@ -12,6 +12,7 @@
   "command.focus": "Focus Sidebar",
   "command.filterTasks": "Search Tasks",
   "command.toggleLanguage": "Language",
+  "command.openTools": "Tools",
   "command.filterTimeline": "Filter Timeline",
   "command.deleteTask": "Delete Task",
   "command.renameTask": "Rename Task",
@@ -21,5 +22,7 @@
   "config.locale": "Interface language for Crazy Universe views, prompts, and the status bar",
   "config.locale.auto": "Follow Cursor language",
   "config.locale.en": "English",
-  "config.locale.zh-cn": "Chinese"
+  "config.locale.zh-cn": "Chinese",
+  "config.worklog.enabled": "Enable experimental Feishu worklog plugin sync (in-house plugin only, not official work-hour management; not generally applicable)",
+  "config.worklog.running": "Whether the Feishu worklog tool is currently running"
 }

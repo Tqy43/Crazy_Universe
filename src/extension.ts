@@ -64,6 +64,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         timelineProvider.refresh();
       }
       if (
+        event.affectsConfiguration(CONFIG.worklogEnabled) ||
+        event.affectsConfiguration(CONFIG.worklogRunning)
+      ) {
+        taskList.refresh();
+      }
+      if (
         event.affectsConfiguration(CONFIG.includeOpenFiles) ||
         event.affectsConfiguration(CONFIG.includeChangedPaths)
       ) {
