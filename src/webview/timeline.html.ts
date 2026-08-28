@@ -48,6 +48,7 @@ export function renderTimelineShell(): { html: string } {
       text-align: center;
     }
     .page {
+      position: relative;
       display: flex;
       flex-direction: column;
       height: 100%;
@@ -91,6 +92,166 @@ export function renderTimelineShell(): { html: string } {
     .git-hint button {
       flex-shrink: 0;
     }
+    .worklog-bar, .mode-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--vscode-sideBar-border, var(--vscode-widget-border));
+    }
+    .mode-bar { padding-top: 8px; }
+    .mode-btn {
+      height: 22px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 3px;
+      background: transparent;
+      color: var(--vscode-foreground);
+      cursor: pointer;
+    }
+    .mode-btn.active {
+      background: var(--vscode-toolbar-hoverBackground);
+    }
+    .worklog-bar .summary {
+      flex: 1;
+      min-width: 0;
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+    }
+    .worklog-hint {
+      flex-shrink: 0;
+      margin: 0;
+      padding: 6px 12px 8px;
+      color: var(--vscode-errorForeground);
+      font-size: 11px;
+      line-height: 1.4;
+      border-bottom: 1px solid var(--vscode-sideBar-border, var(--vscode-widget-border));
+    }
+    .segment {
+      position: relative;
+      margin: 0 4px 10px;
+      padding: 8px 8px 8px 10px;
+      border: 1px solid var(--vscode-widget-border, var(--vscode-sideBar-border));
+      border-radius: 4px;
+      background: var(--vscode-editor-background, var(--vscode-sideBar-background));
+    }
+    .segment.selected {
+      border-color: var(--vscode-focusBorder, var(--vscode-textLink-foreground));
+    }
+    .segment.open-seg { opacity: 0.72; }
+    .segment-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .segment-head input { margin-top: 3px; }
+    .segment-title {
+      flex: 1;
+      min-width: 0;
+      font-size: 12px;
+    }
+    .segment-title strong { font-weight: 600; }
+    .segment-meta {
+      color: var(--vscode-descriptionForeground);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+    .worklog-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 0 12px 12px;
+    }
+    .worklog-fields label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 0;
+      color: var(--vscode-descriptionForeground);
+      font-size: 11px;
+    }
+    .worklog-fields input[type="text"],
+    .worklog-fields input[type="number"],
+    .worklog-fields input[type="datetime-local"],
+    .worklog-fields textarea {
+      width: 100%;
+      min-height: 26px;
+      margin: 0;
+      background: var(--vscode-input-background);
+      color: var(--vscode-input-foreground);
+      border: 1px solid var(--vscode-input-border, var(--vscode-dropdown-border));
+      border-radius: 2px;
+      padding: 4px 8px;
+    }
+    .worklog-fields textarea {
+      min-height: 0;
+      max-height: none;
+      margin-bottom: 0;
+      resize: none;
+    }
+    .worklog-fields input:focus,
+    .worklog-fields textarea:focus {
+      outline: 1px solid var(--vscode-focusBorder);
+      outline-offset: -1px;
+    }
+    .worklog-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 8px;
+      align-items: end;
+    }
+    .worklog-panel {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--vscode-sideBar-background);
+    }
+    .worklog-panel-head {
+      flex-shrink: 0;
+      padding: 10px 12px 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .worklog-panel-sum {
+      flex-shrink: 0;
+      margin: 0 12px 10px;
+      padding: 6px 8px;
+      border-radius: 3px;
+      background: var(--vscode-textBlockQuote-background, var(--vscode-editor-inactiveSelectionBackground));
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+    }
+    .worklog-panel-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .worklog-panel-body .worklog-fields {
+      flex: 1;
+      min-height: 0;
+    }
+    .worklog-desc {
+      flex: 1;
+      min-height: 0;
+    }
+    .worklog-desc textarea {
+      flex: 1;
+      min-height: 0;
+      height: auto;
+      resize: none;
+    }
+    .worklog-panel-foot {
+      flex-shrink: 0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      padding: 8px 12px 12px;
+      border-top: 1px solid var(--vscode-sideBar-border, var(--vscode-widget-border));
+    }
     .feed {
       position: relative;
       flex: 1;
@@ -99,6 +260,7 @@ export function renderTimelineShell(): { html: string } {
       padding: 10px 12px 16px 8px;
       scrollbar-width: none;
     }
+    .feed.segments::before { display: none; }
     .feed::-webkit-scrollbar {
       width: 0;
       height: 0;
@@ -256,22 +418,57 @@ export function renderTimelineShell(): { html: string } {
         <span id="gitHintText"></span>
         <button class="copy" id="dismissGit" type="button">关闭</button>
       </div>
+      <div id="modeBar" class="mode-bar hidden">
+        <button class="mode-btn active" type="button" data-view="events" id="viewEvents">事件</button>
+        <button class="mode-btn" type="button" data-view="segments" id="viewSegments">工作段</button>
+      </div>
+      <div id="worklogBar" class="worklog-bar hidden">
+        <span class="summary" id="worklogSummary"></span>
+        <button class="btn primary" type="button" id="worklogRegister">登记工时</button>
+      </div>
+      <p class="worklog-hint hidden" id="worklogHint"></p>
       <div id="feed" class="feed"></div>
+      <div id="worklogPanel" class="worklog-panel hidden">
+        <div class="worklog-panel-head">
+          <span id="worklogModalTitle">登记工时</span>
+        </div>
+        <p class="worklog-panel-sum" id="worklogPanelSum"></p>
+        <div class="worklog-panel-body">
+          <div id="worklogFields" class="worklog-fields">
+            <label><span id="workItemLabel">工作项</span>
+              <input id="workItem" type="text" /></label>
+            <div class="worklog-row">
+              <label><span id="workStartedLabel">开始时间</span>
+                <input id="workStarted" type="datetime-local" /></label>
+              <label><span id="workMinutesLabel">工时（分钟）</span>
+                <input id="workMinutes" type="number" min="0" step="1" /></label>
+            </div>
+            <label class="worklog-desc"><span id="workDescriptionLabel">说明</span>
+              <textarea id="workDescription"></textarea></label>
+          </div>
+        </div>
+        <div class="worklog-panel-foot">
+          <button class="btn" id="worklogCancel" type="button">取消</button>
+          <button class="btn primary" id="worklogSave" type="button">确认登记</button>
+        </div>
+      </div>
       <p id="error" class="error hidden"></p>
       <div id="composer" class="composer hidden">
         <h2><span id="composerTitle">添加标记</span> <button class="copy" id="collapse" type="button">收起</button></h2>
-        <label for="kind" id="kindLabel">类型</label>
-        <select id="kind">
-          <option value="change">修改内容</option>
-          <option value="action">关键操作</option>
-          <option value="test">测试结果</option>
-          <option value="commit">提交信息</option>
-          <option value="issue">遇到的问题</option>
-          <option value="next">下一步计划</option>
-          <option value="other" selected>其他</option>
-        </select>
-        <label for="body" id="bodyLabel">正文</label>
-        <textarea id="body" placeholder="记下修改意图、问题或下一步"></textarea>
+        <div id="noteFields">
+          <label for="kind" id="kindLabel">类型</label>
+          <select id="kind">
+            <option value="change">修改内容</option>
+            <option value="action">关键操作</option>
+            <option value="test">测试结果</option>
+            <option value="commit">提交信息</option>
+            <option value="issue">遇到的问题</option>
+            <option value="next">下一步计划</option>
+            <option value="other" selected>其他</option>
+          </select>
+          <label for="body" id="bodyLabel">正文</label>
+          <textarea id="body" placeholder="记下修改意图、问题或下一步"></textarea>
+        </div>
         <div id="preview" class="preview"></div>
         <div class="composer-actions">
           <button class="btn" id="cancel" type="button">取消</button>
@@ -291,7 +488,21 @@ export function renderTimelineShell(): { html: string } {
     const errorEl = document.getElementById('error');
     const gitHintEl = document.getElementById('gitHint');
     const gitHintTextEl = document.getElementById('gitHintText');
+    const modeBarEl = document.getElementById('modeBar');
+    const worklogBarEl = document.getElementById('worklogBar');
+    const worklogSummaryEl = document.getElementById('worklogSummary');
+    const worklogHintEl = document.getElementById('worklogHint');
+    const worklogPanelEl = document.getElementById('worklogPanel');
+    const worklogPanelSumEl = document.getElementById('worklogPanelSum');
+    const workItemEl = document.getElementById('workItem');
+    const workStartedEl = document.getElementById('workStarted');
+    const workMinutesEl = document.getElementById('workMinutes');
+    const workDescriptionEl = document.getElementById('workDescription');
     let ui = {};
+    let state = {};
+    let selectedIds = [];
+    let feedView = 'events';
+    let worklogModalOpen = false;
 
     function applyUi(next) {
       if (!next) {
@@ -308,6 +519,16 @@ export function renderTimelineShell(): { html: string } {
       document.getElementById('body').placeholder = next.bodyPlaceholder || '';
       document.getElementById('cancel').textContent = next.cancel || '';
       document.getElementById('save').textContent = next.saveNote || '';
+      document.getElementById('viewSegments').textContent = next.worklogViewSegments || '';
+      document.getElementById('viewEvents').textContent = next.worklogViewEvents || '';
+      document.getElementById('worklogRegister').textContent = next.worklogRegister || '';
+      document.getElementById('worklogModalTitle').textContent = next.worklogTitle || '';
+      document.getElementById('worklogCancel').textContent = next.cancel || '';
+      document.getElementById('worklogSave').textContent = next.worklogConfirm || '';
+      document.getElementById('workItemLabel').textContent = next.worklogWorkItem || '';
+      document.getElementById('workStartedLabel').textContent = next.worklogStarted || '';
+      document.getElementById('workMinutesLabel').textContent = next.worklogMinutesField || '';
+      document.getElementById('workDescriptionLabel').textContent = next.worklogDescription || '';
       const kindMap = {
         change: next.noteChange,
         action: next.noteAction,
@@ -329,11 +550,28 @@ export function renderTimelineShell(): { html: string } {
       errorEl.classList.toggle('hidden', !message);
     }
 
+    function showWorklogHint(message) {
+      worklogHintEl.textContent = message || '';
+      worklogHintEl.classList.toggle('hidden', !message);
+    }
+
     function setComposer(open) {
       composerEl.classList.toggle('hidden', !open);
       if (open) {
         bodyEl.focus();
       }
+    }
+
+    function setWorklogModal(open) {
+      worklogModalOpen = !!open;
+      worklogPanelEl.classList.toggle('hidden', !open);
+      feedEl.classList.toggle('hidden', !!open);
+      if (open) {
+        showWorklogHint('');
+        fillWorklogForm();
+        workItemEl.focus();
+      }
+      updateWorklogBar();
     }
 
     function escapeHtml(value) {
@@ -342,6 +580,205 @@ export function renderTimelineShell(): { html: string } {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    function fillTemplate(template, params) {
+      let text = String(template || '');
+      Object.keys(params || {}).forEach((key) => {
+        text = text.split('{' + key + '}').join(String(params[key] ?? ''));
+      });
+      return text;
+    }
+
+    function formatDuration(minutes) {
+      const safe = Math.max(0, Math.round(Number(minutes) || 0));
+      if (safe < 60) {
+        return safe + 'm';
+      }
+      const hours = Math.floor(safe / 60);
+      const rest = safe % 60;
+      return rest === 0 ? hours + 'h' : hours + 'h' + rest + 'm';
+    }
+
+    function pad(value) {
+      return String(value).padStart(2, '0');
+    }
+
+    function toDatetimeLocal(iso) {
+      if (!iso) {
+        return '';
+      }
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) {
+        return '';
+      }
+      return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
+        'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+    }
+
+    function fromDatetimeLocal(value) {
+      if (!value) {
+        return '';
+      }
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+    }
+
+    function readableFeishu(text) {
+      return text && text !== '#none' && text !== '#link';
+    }
+
+    function clockLabel(iso) {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) {
+        return iso;
+      }
+      return pad(date.getHours()) + ':' + pad(date.getMinutes());
+    }
+
+    function selectedSegments() {
+      const ids = new Set(selectedIds);
+      return (state.segments || [])
+        .filter((segment) => segment.closed && ids.has(segment.id))
+        .slice()
+        .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+    }
+
+    function draftFromSelection() {
+      const selected = selectedSegments();
+      if (!selected.length) {
+        return { workItemText: '', startedAt: '', minutes: 0, description: '', details: [], selectedCount: 0 };
+      }
+      const commits = selected.flatMap((segment) => segment.commits || [])
+        .filter((commit) => readableFeishu(commit.feishuText))
+        .sort((a, b) => {
+          const byTime = String(b.authorTime || '').localeCompare(String(a.authorTime || ''));
+          return byTime !== 0 ? byTime : String(b.hash || '').localeCompare(String(a.hash || ''));
+        });
+      const latest = commits[0];
+      const fallback = state.taskWorkItem || {};
+      const workItemText = latest ? latest.feishuText : (fallback.text || '');
+      const kindLabels = {
+        change: ui.noteChange,
+        action: ui.noteAction,
+        test: ui.noteTest,
+        commit: ui.noteCommit,
+        issue: ui.noteIssue,
+        next: ui.noteNext,
+        other: ui.noteOther,
+      };
+      const blocks = [];
+      let previousFolder;
+      selected.forEach((segment) => {
+        (segment.notes || []).forEach((note) => {
+          const folder = note.workspaceFolder || segment.workspaceFolder;
+          if (folder && folder !== previousFolder) {
+            blocks.push('【' + folder + '】');
+            previousFolder = folder;
+          }
+          const kind = kindLabels[note.noteKind] || '';
+          blocks.push(clockLabel(note.createdAt) + (kind ? ' ' + kind : '') + '\\n' + (note.body || ''));
+        });
+      });
+      return {
+        workItemText,
+        workItemHref: latest ? latest.feishuHref : fallback.href,
+        startedAt: selected[0].startedAt,
+        minutes: selected.reduce((sum, segment) => sum + (segment.minutes || 0), 0),
+        description: blocks.join('\\n\\n'),
+        details: selected.map((segment) => formatDuration(segment.minutes) + ' ' + (segment.workspaceFolder || '')),
+        selectedCount: selected.length,
+      };
+    }
+
+    function updateWorklogBar() {
+      const draft = draftFromSelection();
+      worklogSummaryEl.textContent = draft.selectedCount
+        ? fillTemplate(ui.worklogBarSelected, { count: draft.selectedCount, duration: formatDuration(draft.minutes) })
+        : (ui.worklogBarEmpty || '');
+      const showBar = !!state.worklogMode && feedView === 'segments' && !worklogModalOpen;
+      worklogBarEl.classList.toggle('hidden', !showBar);
+      if (!showBar) {
+        showWorklogHint('');
+      } else if (draft.selectedCount) {
+        showWorklogHint('');
+      }
+    }
+
+    function fillWorklogForm() {
+      const draft = draftFromSelection();
+      workItemEl.value = draft.workItemText || '';
+      workStartedEl.value = toDatetimeLocal(draft.startedAt);
+      workMinutesEl.value = draft.selectedCount ? String(draft.minutes) : '';
+      workDescriptionEl.value = draft.description || '';
+      worklogPanelSumEl.textContent = draft.selectedCount
+        ? fillTemplate(ui.worklogBarSelected, { count: draft.selectedCount, duration: formatDuration(draft.minutes) })
+        : (ui.worklogBarEmpty || '');
+    }
+
+    function setFeedView(next) {
+      feedView = next;
+      document.getElementById('viewSegments').classList.toggle('active', next === 'segments');
+      document.getElementById('viewEvents').classList.toggle('active', next === 'events');
+      if (next !== 'segments') {
+        showWorklogHint('');
+        setWorklogModal(false);
+      } else {
+        setComposer(false);
+      }
+      renderFeed();
+      reportFeedView();
+    }
+
+    function reportFeedView() {
+      if (state.empty || !state.task) {
+        vscode.postMessage({ type: 'feedView', view: 'none' });
+        return;
+      }
+      vscode.postMessage({
+        type: 'feedView',
+        view: state.worklogMode && feedView === 'segments' ? 'segments' : 'events',
+      });
+    }
+
+    function renderFeed() {
+      const useSegments = !!state.worklogMode && feedView === 'segments';
+      feedEl.classList.toggle('segments', useSegments);
+      if (useSegments) {
+        renderSegments(state.segments || []);
+      } else {
+        renderRows(state.rows || []);
+      }
+      updateWorklogBar();
+    }
+
+    function renderSegments(segments) {
+      if (!segments.length) {
+        feedEl.innerHTML = '<p class="meta">' + escapeHtml(ui.worklogNone || '') + '</p>';
+        return;
+      }
+      let previousDate = '';
+      feedEl.innerHTML = segments.map((segment) => {
+        const date = segment.dateLabel && segment.dateLabel !== previousDate
+          ? '<div class="date">' + escapeHtml(segment.dateLabel) + '</div>'
+          : '';
+        previousDate = segment.dateLabel || previousDate;
+        const checked = selectedIds.indexOf(segment.id) >= 0 ? ' checked' : '';
+        const disabled = segment.selectable ? '' : ' disabled';
+        const selectedClass = checked ? ' selected' : '';
+        const openClass = segment.closed ? '' : ' open-seg';
+        const duration = segment.openLabel || segment.durationLabel;
+        const switched = segment.workspaceChanged
+          ? ' · ' + escapeHtml(ui.worklogSwitched || '')
+          : '';
+        return date +
+          '<article class="segment' + selectedClass + openClass + '" data-segment="' + escapeHtml(segment.id) + '">' +
+          '<label class="segment-head">' +
+          '<input type="checkbox" data-segment-check="' + escapeHtml(segment.id) + '"' + checked + disabled + ' />' +
+          '<span class="segment-title"><strong>' + escapeHtml(segment.rangeLabel) +
+          '  ' + escapeHtml(duration) + '</strong>' +
+          '<div class="segment-meta">' + escapeHtml(segment.workspaceLabel || '') + switched + '</div></span></label></article>';
+      }).join('');
     }
 
     const DISPLAY_COMMITS = ${DISPLAY_COMMITS};
@@ -425,19 +862,34 @@ export function renderTimelineShell(): { html: string } {
         return;
       }
       if (message.type !== 'state') return;
-      const state = message.payload;
+      state = message.payload;
       applyUi(state.ui);
       showError('');
       if (state.empty) {
         emptyEl.textContent = state.emptyMessage;
         emptyEl.classList.remove('hidden');
         pageEl.classList.add('hidden');
+        reportFeedView();
         return;
       }
       emptyEl.classList.add('hidden');
       pageEl.classList.remove('hidden');
       previewEl.textContent = state.snapshotPreview;
-      renderRows(state.rows);
+      const valid = new Set((state.segments || []).filter((segment) => segment.selectable).map((segment) => segment.id));
+      selectedIds = selectedIds.filter((id) => valid.has(id));
+      if (!state.worklogMode) {
+        feedView = 'events';
+        setWorklogModal(false);
+        showWorklogHint('');
+      }
+      modeBarEl.classList.toggle('hidden', !state.worklogMode);
+      document.getElementById('viewSegments').classList.toggle('active', feedView === 'segments');
+      document.getElementById('viewEvents').classList.toggle('active', feedView === 'events');
+      renderFeed();
+      reportFeedView();
+      if (worklogModalOpen) {
+        fillWorklogForm();
+      }
       gitHintTextEl.textContent = state.gitHint || '';
       gitHintEl.classList.toggle('hidden', !state.gitHint);
       if (!state.task.canNote) setComposer(false);
@@ -453,6 +905,40 @@ export function renderTimelineShell(): { html: string } {
       }
       if (target.closest('#dismissGit')) {
         vscode.postMessage({ type: 'dismissGitHint' });
+        return;
+      }
+      const viewEl = target.closest('[data-view]');
+      if (viewEl) {
+        setFeedView(viewEl.getAttribute('data-view'));
+        return;
+      }
+      if (target.closest('#worklogRegister')) {
+        if (!selectedSegments().length) {
+          showWorklogHint(ui.worklogNeedSelect || '');
+          return;
+        }
+        showWorklogHint('');
+        setWorklogModal(true);
+        return;
+      }
+      if (target.closest('#worklogCancel')) {
+        setWorklogModal(false);
+        return;
+      }
+      if (target.closest('#worklogSave')) {
+        if (!selectedSegments().length) {
+          showWorklogHint(ui.worklogNeedSelect || '');
+          setWorklogModal(false);
+          return;
+        }
+        vscode.postMessage({
+          type: 'worklogConfirm',
+          workItem: workItemEl.value,
+          startedAt: fromDatetimeLocal(workStartedEl.value),
+          minutes: Number(workMinutesEl.value),
+          description: workDescriptionEl.value,
+        });
+        setWorklogModal(false);
         return;
       }
       const fileEl = target.closest('[data-file]');
@@ -504,6 +990,24 @@ export function renderTimelineShell(): { html: string } {
       }
     });
 
+    feedEl.addEventListener('change', (event) => {
+      const box = event.target && event.target.closest ? event.target.closest('[data-segment-check]') : null;
+      if (!box) {
+        return;
+      }
+      const id = box.getAttribute('data-segment-check');
+      if (box.checked) {
+        if (selectedIds.indexOf(id) < 0) {
+          selectedIds.push(id);
+        }
+      } else {
+        selectedIds = selectedIds.filter((item) => item !== id);
+      }
+      renderFeed();
+      if (worklogModalOpen) {
+        fillWorklogForm();
+      }
+    });
     document.getElementById('collapse').addEventListener('click', () => setComposer(false));
     document.getElementById('cancel').addEventListener('click', () => {
       bodyEl.value = '';
@@ -515,6 +1019,11 @@ export function renderTimelineShell(): { html: string } {
         noteKind: kindEl.value,
         body: bodyEl.value,
       });
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && worklogModalOpen) {
+        setWorklogModal(false);
+      }
     });
 
     vscode.postMessage({ type: 'ready' });

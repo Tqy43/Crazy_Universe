@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { COMMANDS, CONFIG } from '../constants';
+import { COMMANDS, CONFIG, CONTEXT } from '../constants';
 import type { NoteKind, Task } from '../types';
 import type { TaskService } from '../domain/TaskService';
 import { t, webviewUi } from '../i18n';
@@ -18,6 +18,7 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   private selectedTask: Task | undefined;
   private filter: TimelineFilter = 'all';
+  private feedView: 'events' | 'segments' = 'events';
   private gitHintDismissed = false;
   private pushGeneration = 0;
 
@@ -43,6 +44,10 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
 
   setSelectedTask(task: Task | undefined): void {
     this.selectedTask = task;
+    if (!task) {
+      this.feedView = 'events';
+    }
+    this.syncFeedContext(task ? this.feedView : 'none');
     void this.pushState();
   }
 
@@ -72,6 +77,7 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
     if (this.selectedTask) {
       this.selectedTask = this.store.getTask(this.selectedTask.id);
     }
+    this.syncFeedContext(this.selectedTask ? this.feedView : 'none');
     void this.pushState();
   }
 
@@ -82,7 +88,14 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
     const payload = message as Record<string, unknown>;
     switch (payload.type) {
       case 'ready':
+        this.syncFeedContext(this.selectedTask ? this.feedView : 'none');
         await this.pushState();
+        return;
+      case 'feedView':
+        if (payload.view === 'events' || payload.view === 'segments' || payload.view === 'none') {
+          this.feedView = payload.view === 'segments' ? 'segments' : 'events';
+          this.syncFeedContext(payload.view === 'none' ? 'none' : this.feedView);
+        }
         return;
       case 'setFilter':
         if (payload.filter === 'all' || payload.filter === 'status' || payload.filter === 'notes') {
@@ -98,6 +111,9 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
         return;
       case 'addNote':
         await this.addNote(payload.noteKind, payload.body);
+        return;
+      case 'worklogConfirm':
+        this.confirmWorklogDraft(payload);
         return;
       case 'dismissGitHint':
         this.gitHintDismissed = true;
@@ -200,11 +216,37 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
       includeChangedPaths,
       snapshotPreview: snapshotPreviewText(snapshot, includeOpenFiles),
       currentWorkspacePath: snapshot.context.workspacePath,
+      worklogMode: this.worklogMode(),
     });
     void this.view.webview.postMessage({
       type: 'state',
       payload: { ...model, gitAvailable, gitHint, ui: webviewUi() },
     });
+  }
+
+  private worklogMode(): boolean {
+    const config = vscode.workspace.getConfiguration();
+    return (
+      config.get<boolean>(CONFIG.worklogEnabled, false) === true &&
+      config.get<boolean>(CONFIG.worklogRunning, true) === true
+    );
+  }
+
+  private syncFeedContext(feed: 'events' | 'segments' | 'none'): void {
+    void vscode.commands.executeCommand('setContext', CONTEXT.timelineFeed, feed);
+  }
+
+  private confirmWorklogDraft(payload: Record<string, unknown>): void {
+    const workItem = String(payload.workItem ?? '').trim() || '—';
+    const minutes = Number.isFinite(Number(payload.minutes)) ? Math.round(Number(payload.minutes)) : 0;
+    const started = String(payload.startedAt ?? '').trim() || '—';
+    void vscode.window.showInformationMessage(
+      t('worklog.localOnly', {
+        workItem,
+        minutes: String(minutes),
+        started,
+      }),
+    );
   }
 
   private postError(message: string): void {

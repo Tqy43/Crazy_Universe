@@ -172,27 +172,23 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
   private sections(tasks: Task[]) {
     const needle = this.searchOpen ? this.searchNeedle.trim().toLowerCase() : '';
-    const toolItems = this.toolItems(needle);
     if (needle) {
       const hits = [
         ...tasks.filter((task) => task.status === 'in_progress'),
         ...activeTasks(tasks),
         ...completedTasks(tasks),
       ].filter((task) => task.title.toLowerCase().includes(needle));
-      const items = [
-        ...hits.map((task) => this.item(task)),
-        ...toolItems,
-      ];
       return [
         {
           id: 'search',
           title: t('section.search'),
-          items: items.length > 0 ? items : [
+          items: hits.length > 0 ? hits.map((task) => this.item(task)) : [
             { placeholder: true, title: t('empty.noMatch') },
           ],
         },
       ];
     }
+    const toolItems = this.toolItems();
     const current = tasks.find((task) => task.status === 'in_progress');
     return [
       {
@@ -220,12 +216,8 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     ];
   }
 
-  private toolItems(needle: string) {
+  private toolItems() {
     if (!this.worklogVisible()) {
-      return [];
-    }
-    const title = t('tools.bar');
-    if (needle && !title.toLowerCase().includes(needle) && !t('tools.worklog').toLowerCase().includes(needle)) {
       return [];
     }
     const running = this.worklogRunning();
@@ -233,7 +225,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       {
         id: 'worklog',
         kind: 'tool' as const,
-        title,
+        title: t('tools.bar'),
         description: running ? t('tools.running') : t('tools.stopped'),
         status: running ? 'running' : 'stopped',
       },

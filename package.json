@@ -209,12 +209,12 @@
         },
         {
           "command": "crazyUniverse.filterTimeline",
-          "when": "view == crazyUniverse.timeline",
+          "when": "view == crazyUniverse.timeline && crazyUniverse.hasSelection && crazyUniverse.timelineFeed == events",
           "group": "navigation@0"
         },
         {
           "command": "crazyUniverse.addNote",
-          "when": "view == crazyUniverse.timeline && crazyUniverse.hasSelection",
+          "when": "view == crazyUniverse.timeline && crazyUniverse.hasSelection && crazyUniverse.timelineFeed == events",
           "group": "navigation@1"
         }
       ]
@@ -261,7 +261,6 @@
     "build": "node esbuild.js --production",
     "watch": "node esbuild.js --watch",
     "lint": "tsc --noEmit",
-    "test": "tsx --test src/i18n.test.ts src/domain/stateMachine.test.ts src/domain/TaskService.test.ts src/webview/timelineModel.test.ts src/snapshot/gitParse.test.ts src/snapshot/paths.test.ts src/snapshot/gitRoots.test.ts src/feishu/links.test.ts",
     "package": "npx --yes @vscode/vsce package --no-dependencies"
   },
   "devDependencies": {

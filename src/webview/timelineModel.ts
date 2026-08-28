@@ -1,8 +1,13 @@
 import type { AutoSnapshot, Event, Task, TaskStatus } from '../types';
 import { noteKindLabel } from '../domain/notes';
 import { statusLabel } from '../domain/stateMachine';
+import {
+  buildWorkSegments,
+  formatDuration,
+  type WorkSegment,
+} from '../domain/workSegments';
 import { displayGitShort, t } from '../i18n';
-import { findCommitFeishuRef } from '../feishu/links';
+import { findCommitFeishuRef, findFeishuRef } from '../feishu/links';
 import { fileName } from '../snapshot/paths';
 
 export type TimelineFilter = 'all' | 'status' | 'notes';
@@ -67,9 +72,30 @@ export interface TimelineViewModel {
     canNote: boolean;
   };
   filter: TimelineFilter;
+  worklogMode: boolean;
+  taskWorkItem: { text: string; href?: string };
   rows: TimelineRow[];
+  segments: TimelineSegmentRow[];
   snapshotPreview: string;
   currentWorkspacePath: string;
+}
+
+export interface TimelineSegmentRow {
+  id: string;
+  closed: boolean;
+  selectable: boolean;
+  rangeLabel: string;
+  durationLabel: string;
+  minutes: number;
+  startedAt: string;
+  endedAt?: string;
+  dateLabel: string;
+  workspaceLabel: string;
+  workspacePath: string;
+  workspaceChanged: boolean;
+  openLabel?: string;
+  notes: WorkSegment['notes'];
+  commits: WorkSegment['commits'];
 }
 
 export function filterEvents(events: Event[], filter: TimelineFilter): Event[] {
@@ -265,13 +291,17 @@ export function buildTimelineViewModel(input: {
   includeChangedPaths: boolean;
   snapshotPreview: string;
   currentWorkspacePath?: string;
+  worklogMode?: boolean;
 }): TimelineViewModel {
   if (!input.task) {
     return {
       empty: true,
       emptyMessage: t('timeline.empty'),
       filter: input.filter,
+      worklogMode: !!input.worklogMode,
+      taskWorkItem: { text: '' },
       rows: [],
+      segments: [],
       snapshotPreview: input.snapshotPreview,
       currentWorkspacePath: input.currentWorkspacePath ?? '',
     };
@@ -298,12 +328,57 @@ export function buildTimelineViewModel(input: {
       canNote: input.task.status !== 'completed',
     },
     filter: input.filter,
+    worklogMode: !!input.worklogMode,
+    taskWorkItem: workItemFromTitle(input.task.title),
     rows: buildTimelineRows(filtered, {
       includeOpenFiles: input.includeOpenFiles,
       includeChangedPaths: input.includeChangedPaths,
       taskTitle: input.task.title,
     }),
+    segments: buildSegmentRows(input.events),
     snapshotPreview: input.snapshotPreview,
     currentWorkspacePath: input.currentWorkspacePath ?? '',
   };
+}
+
+export function buildSegmentRows(events: Event[], nowIso?: string): TimelineSegmentRow[] {
+  return buildWorkSegments(events, nowIso)
+    .slice()
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+    .map((segment) => {
+      const workspaceLabel = [segment.workspaceFolder, segment.branch].filter(Boolean).join(' · ');
+      return {
+        id: segment.id,
+        closed: segment.closed,
+        selectable: segment.closed,
+        rangeLabel: formatRange(segment.startedAt, segment.endedAt),
+        durationLabel: formatDuration(segment.closed ? segment.minutes : segment.elapsedMinutes),
+        minutes: segment.minutes,
+        startedAt: segment.startedAt,
+        endedAt: segment.endedAt,
+        dateLabel: formatDay(segment.endedAt ?? segment.startedAt),
+        workspaceLabel,
+        workspacePath: segment.workspacePath,
+        workspaceChanged: segment.workspaceChanged,
+        openLabel: segment.closed ? undefined : t('worklog.openHint', { duration: formatDuration(segment.elapsedMinutes) }),
+        notes: segment.notes,
+        commits: segment.commits,
+      };
+    });
+}
+
+function formatRange(startIso: string, endIso?: string): string {
+  const start = formatHm(startIso);
+  if (!endIso) {
+    return `${start}–`;
+  }
+  return `${start}–${formatHm(endIso)}`;
+}
+
+function workItemFromTitle(title?: string): { text: string; href?: string } {
+  const ref = findFeishuRef(title);
+  if (ref.text === '#none' || ref.text === '#link') {
+    return { text: '' };
+  }
+  return { text: ref.text, href: ref.href };
 }

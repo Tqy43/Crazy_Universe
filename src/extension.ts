@@ -35,6 +35,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const collector = new SnapshotCollector(new GitReader((message) => output.appendLine(message)));
   const service = new TaskService(store, (options) => collector.capture(options));
+
+  await store.commit((draft) => {
+    const demoId = 'crazy-universe-worklog-demo';
+    const before = draft.tasks.length;
+    draft.tasks = draft.tasks.filter((item) => item.id !== demoId);
+    draft.events = draft.events.filter((item) => item.taskId !== demoId);
+    if (draft.tasks.length !== before) {
+      output.appendLine('已移除工时演示任务。');
+    }
+  });
   const timelineProvider = new TimelineViewProvider(context, store, service, collector);
   const taskList = new TaskListViewProvider(context, store, (task) => {
     timelineProvider.setSelectedTask(task);
@@ -68,6 +78,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         event.affectsConfiguration(CONFIG.worklogRunning)
       ) {
         taskList.refresh();
+        timelineProvider.refresh();
       }
       if (
         event.affectsConfiguration(CONFIG.includeOpenFiles) ||
@@ -80,6 +91,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   syncWorkspaceContext(store);
   void vscode.commands.executeCommand('setContext', CONTEXT.hasSelection, false);
+  void vscode.commands.executeCommand('setContext', CONTEXT.timelineFeed, 'none');
 
   registerCommands(context, { service, store, taskList, timelineProvider });
 }

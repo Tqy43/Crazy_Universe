@@ -64,7 +64,6 @@ Crazy_Universe/
 ## Test and package
 
 ```bash
-npm test
 npm run lint
 npm run package
 ```

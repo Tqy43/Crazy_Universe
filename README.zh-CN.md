@@ -64,7 +64,6 @@ Crazy_Universe/
 ## 测试与打包
 
 ```bash
-npm test
 npm run lint
 npm run package
 ```

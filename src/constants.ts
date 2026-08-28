@@ -28,6 +28,7 @@ export const CONTEXT = {
   hasSelection: 'crazyUniverse.hasSelection',
   selectionStatus: 'crazyUniverse.selectionStatus',
   hasActiveTask: 'crazyUniverse.hasActiveTask',
+  timelineFeed: 'crazyUniverse.timelineFeed',
 } as const;
 
 export const CONFIG = {
