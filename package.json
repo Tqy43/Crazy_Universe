@@ -127,6 +127,11 @@
         "category": "Crazy Universe"
       },
       {
+        "command": "crazyUniverse.enterWorklogUserId",
+        "title": "%command.enterWorklogUserId%",
+        "category": "Crazy Universe"
+      },
+      {
         "command": "crazyUniverse.filterTimeline",
         "title": "%command.filterTimeline%",
         "category": "Crazy Universe",
@@ -181,6 +186,10 @@
         },
         {
           "command": "crazyUniverse.loginWorklog",
+          "when": "config.crazyUniverse.worklog.enabled"
+        },
+        {
+          "command": "crazyUniverse.enterWorklogUserId",
           "when": "config.crazyUniverse.worklog.enabled"
         },
         {

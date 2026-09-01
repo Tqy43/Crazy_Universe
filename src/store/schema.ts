@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { Event, Task } from '../types';
 
 export const SCHEMA_VERSION = 1;
@@ -24,7 +25,7 @@ export function emptyStore(): StoreFile {
 export function assertInvariants(data: StoreFile): void {
   const inProgress = data.tasks.filter((task) => task.status === 'in_progress');
   if (inProgress.length > 1) {
-    throw new Error('同一时刻最多一个进行中任务。');
+    throw new Error(t('error.oneInProgress'));
   }
 }
 

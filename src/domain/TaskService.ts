@@ -96,7 +96,9 @@ export class TaskService {
       const task = requireTaskInDraft(draft, taskId);
       assertCanTransition(task.status, 'pause');
       applyStatus(task, 'pause', now, snapshot.context);
-      draft.events.push(makeEvent(task.id, 'task.paused', now, scopedSnapshot(snapshot, draft, task.id, now), body));
+      draft.events.push(
+        makeEvent(task.id, 'task.paused', now, scopedSnapshot(snapshot, draft, task.id, now), body, body ? 'next' : undefined),
+      );
     });
   }
 

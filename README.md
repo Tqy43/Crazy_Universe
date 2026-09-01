@@ -2,11 +2,11 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-A VS Code / Cursor extension for managing multiple development task contexts and recording your workflow locally, privacy-first.
+A VS Code extension for managing multiple development task contexts and recording your workflow locally, privacy-first.
 
 ## Install
 
-Install [Crazy Universe](https://marketplace.visualstudio.com/items?itemName=CrazyUniverse.crazy-universe) from the Visual Studio Marketplace, or search **Crazy Universe** in the VS Code / Cursor Extensions view.
+Install [Crazy Universe](https://marketplace.visualstudio.com/items?itemName=CrazyUniverse.crazy-universe) from the Visual Studio Marketplace, or search **Crazy Universe** in the VS Code Extensions view.
 
 ## Features /Local builds
 
@@ -17,7 +17,7 @@ Install a given version from the matching `.vsix` link below (Extensions → `�
 - **Tools** group in the task list: enable / disable / hide an in-house plugin without mixing it into task search
 - Optional **Feishu worklog** (In-house plugin, not official 日志管理): pick closed work segments on the timeline and submit hours after you confirm
 - Work-segment view: time range + duration + workspace/branch; in-progress segments are shown but not selectable
-- Multi-select sums closed-segment minutes (gaps such as lunch are not counted); one confirm posts one work item
+- Multi-select sums closed-segment minutes (gaps such as lunch are not counted); same-day segments merge into one entry, cross-day selection walks 1/n dialogs you can switch between (Cancel skips this day, Cancel all stops the rest); still one work item
 - Sign in via Tools → **Sign in to Feishu worklog** (dedicated Chrome profile). The extension still works offline if worklog is off
 
 

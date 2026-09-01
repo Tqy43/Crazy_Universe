@@ -2,11 +2,11 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-VS Code / Cursor 扩展：管理多个开发任务上下文，并记录开发工作流（本地、隐私优先）
+VS Code 扩展：管理多个开发任务上下文，并记录开发工作流（本地、隐私优先）
 
 ## 安装
 
-在 [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=CrazyUniverse.crazy-universe) 安装 Crazy Universe，或在 VS Code / Cursor 的扩展视图中搜索 **Crazy Universe**。
+在 [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=CrazyUniverse.crazy-universe) 安装 Crazy Universe，或在 VS Code 的扩展视图中搜索 **Crazy Universe**。
 
 ## 功能/本地安装包
 
@@ -17,7 +17,7 @@ VS Code / Cursor 扩展：管理多个开发任务上下文，并记录开发工
 - 任务列表增加 **工具** 分组：可使用 / 停用 / 隐藏内部插件，搜索任务时不会出现
 - 可选 **飞书工时**（自研工时插件，不是官方「日志管理」）：在时间线勾选已结束的工作段，确认后才登记
 - 工作段视图：时间范围 + 时长 + 工作区/分支；进行中的段只展示、不可勾选
-- 多选时分钟按各段相加（午饭等空隙不计）；一次确认只挂一个飞书工作项
+- 多选时分钟按各段相加（午饭等空隙不计）；同一天合并为一条，跨天可用 1/n 切换逐步登记（取消当前天 / 全部取消）；仍只挂一个飞书工作项
 - 工具右键 **登录飞书工时**（专用 Chrome）。不开工时时，开始 / 暂停 / 标记仍可离线使用
 
 

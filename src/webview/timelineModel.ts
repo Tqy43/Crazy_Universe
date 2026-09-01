@@ -1,13 +1,14 @@
 import type { AutoSnapshot, Event, Task, TaskStatus } from '../types';
 import { noteKindLabel } from '../domain/notes';
 import { statusLabel } from '../domain/stateMachine';
+import { displayGitShort, t } from '../i18n';
+import { findCommitFeishuRef, findFeishuRef } from '../feishu/links';
 import {
   buildWorkSegments,
   formatDuration,
+  localDayKey,
   type WorkSegment,
 } from '../domain/workSegments';
-import { displayGitShort, t } from '../i18n';
-import { findCommitFeishuRef, findFeishuRef } from '../feishu/links';
 import { fileName } from '../snapshot/paths';
 
 export type TimelineFilter = 'all' | 'status' | 'notes';
@@ -93,6 +94,7 @@ export interface TimelineSegmentRow {
   workspaceLabel: string;
   workspacePath: string;
   workspaceChanged: boolean;
+  crossedDays: boolean;
   openLabel?: string;
   submitted: boolean;
   notes: WorkSegment['notes'];
@@ -343,25 +345,29 @@ export function buildTimelineViewModel(input: {
 }
 
 export function buildSegmentRows(events: Event[], nowIso?: string): TimelineSegmentRow[] {
+  const now = nowIso ?? new Date().toISOString();
   const byId = new Map(events.map((event) => [event.id, event]));
-  return buildWorkSegments(events, nowIso)
+  return buildWorkSegments(events, now)
     .slice()
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
     .map((segment) => {
       const workspaceLabel = [segment.workspaceFolder, segment.branch].filter(Boolean).join(' · ');
+      const endForDisplay = segment.endedAt ?? now;
+      const crossedDays = localDayKey(segment.startedAt) !== localDayKey(endForDisplay);
       return {
         id: segment.id,
         closed: segment.closed,
         selectable: segment.closed,
-        rangeLabel: formatRange(segment.startedAt, segment.endedAt),
+        rangeLabel: formatRange(segment.startedAt, segment.closed ? segment.endedAt : undefined),
         durationLabel: formatDuration(segment.closed ? segment.minutes : segment.elapsedMinutes),
         minutes: segment.minutes,
         startedAt: segment.startedAt,
         endedAt: segment.endedAt,
-        dateLabel: formatDay(segment.endedAt ?? segment.startedAt),
+        dateLabel: formatDay(segment.startedAt),
         workspaceLabel,
         workspacePath: segment.workspacePath,
         workspaceChanged: segment.workspaceChanged,
+        crossedDays,
         openLabel: segment.closed ? undefined : t('worklog.openHint', { duration: formatDuration(segment.elapsedMinutes) }),
         submitted: Boolean(segment.endEventId && byId.get(segment.endEventId)?.worklogId),
         notes: segment.notes,
@@ -371,11 +377,11 @@ export function buildSegmentRows(events: Event[], nowIso?: string): TimelineSegm
 }
 
 function formatRange(startIso: string, endIso?: string): string {
-  const start = formatHm(startIso);
+  const startTime = formatHm(startIso);
   if (!endIso) {
-    return `${start}–`;
+    return `${startTime}–`;
   }
-  return `${start}–${formatHm(endIso)}`;
+  return `${startTime}–${formatHm(endIso)}`;
 }
 
 function workItemFromTitle(title?: string): { text: string; href?: string } {

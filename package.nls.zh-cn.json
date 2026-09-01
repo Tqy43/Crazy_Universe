@@ -1,5 +1,5 @@
 {
-  "extension.description": "管理多个开发任务上下文，并记录开发工作流（本地、隐私优先）",
+  "extension.description": "管理多个开发任务上下文，并记录开发工作流",
   "view.tasks": "任务",
   "view.timeline": "时间线",
   "command.newTask": "新建任务",
@@ -14,6 +14,7 @@
   "command.toggleLanguage": "语言",
   "command.openTools": "工具",
   "command.loginWorklog": "登录飞书工时",
+  "command.enterWorklogUserId": "手动输入用户 ID",
   "command.filterTimeline": "筛选时间线",
   "command.deleteTask": "删除任务",
   "command.renameTask": "重命名任务",
@@ -26,5 +27,5 @@
   "config.locale.zh-cn": "中文",
   "config.worklog.enabled": "启用实验性飞书工时插件同步（仅自研飞书工时管理插件可用，非官方工时管理，不具备普适性）",
   "config.worklog.running": "飞书工时工具当前是否正在使用",
-  "config.worklog.userId": "飞书工时用户 ID（嗅探拿不到时用这个）"
+  "config.worklog.userId": "飞书工时用户 ID。登录后仍提示没有用户 ID 时，在设置里搜索本项并填写（一般为数字，或 ou_ 开头）。"
 }

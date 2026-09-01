@@ -1,3 +1,4 @@
+import { getLocale, t } from '../i18n';
 import type { GitStatusSummary } from '../types';
 
 export const MAX_CHANGED_PATHS = 50;
@@ -75,31 +76,31 @@ export function parseGitLog(stdout: string): ParsedCommit[] {
 export function formatGitShortText(status: ParsedGitStatus): string {
   const modified = status.stagedCount + status.unstagedCount;
   if (modified === 0 && status.untrackedCount === 0) {
-    return '干净';
+    return t('git.clean');
   }
   const parts: string[] = [];
   if (modified > 0) {
-    parts.push(`${modified} 个已改`);
+    parts.push(t('git.changed', { count: modified }));
   }
   if (status.untrackedCount > 0) {
-    parts.push(`${status.untrackedCount} 个新文件`);
+    parts.push(t('git.newFiles', { count: status.untrackedCount }));
   }
-  return parts.join('，');
+  return parts.join(getLocale() === 'en' ? ', ' : '，');
 }
 
 export function formatGitDetailText(status: ParsedGitStatus): string {
   const modified = status.stagedCount + status.unstagedCount;
   if (modified === 0 && status.untrackedCount === 0) {
-    return '没有未提交改动';
+    return t('git.detailClean');
   }
   const parts: string[] = [];
   if (modified > 0) {
-    parts.push(`${modified} 个已改未提交`);
+    parts.push(t('git.detailChanged', { count: modified }));
   }
   if (status.untrackedCount > 0) {
-    parts.push(`${status.untrackedCount} 个新文件（尚未 git add）`);
+    parts.push(t('git.detailUntracked', { count: status.untrackedCount }));
   }
-  return parts.join('，');
+  return parts.join(getLocale() === 'en' ? ', ' : '，');
 }
 
 export function filterCommitsInPeriod(

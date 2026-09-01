@@ -19,6 +19,7 @@ export const COMMANDS = {
   openTools: 'crazyUniverse.openTools',
   filterTimeline: 'crazyUniverse.filterTimeline',
   loginWorklog: 'crazyUniverse.loginWorklog',
+  enterWorklogUserId: 'crazyUniverse.enterWorklogUserId',
   deleteTask: 'crazyUniverse.deleteTask',
   renameTask: 'crazyUniverse.renameTask',
   statusBarPick: 'crazyUniverse.statusBarPick',

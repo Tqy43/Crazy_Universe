@@ -11,6 +11,7 @@ import { renderTimelineShell } from '../webview/timeline.html';
 import { buildTimelineViewModel, type TimelineFilter } from '../webview/timelineModel';
 import { buildWorkSegments } from '../domain/workSegments';
 import type { WorklogService } from '../worklog/WorklogService';
+import { normalizeWorkItem, validateWorklogInput } from '../worklog/payload';
 
 const NOTE_KIND_IDS: NoteKind[] = ['change', 'action', 'test', 'commit', 'issue', 'next', 'other'];
 
@@ -245,6 +246,7 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
   private async loginWorklogFromPanel(): Promise<void> {
     try {
       await this.worklog.login();
+      void vscode.window.showInformationMessage(t('worklog.loginResubmit'));
       void this.view?.webview.postMessage({ type: 'worklogLoginResult', ok: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -253,47 +255,146 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async confirmWorklogDraft(payload: Record<string, unknown>): Promise<void> {
-    const workItem = String(payload.workItem ?? '').trim();
-    const minutes = Number.isFinite(Number(payload.minutes)) ? Math.round(Number(payload.minutes)) : 0;
-    const startedAt = String(payload.startedAt ?? '').trim();
-    const description = String(payload.description ?? '');
-    const segmentIds = Array.isArray(payload.segmentIds)
-      ? payload.segmentIds.map((item) => String(item))
-      : [];
-    const task = this.selectedTask;
-    try {
-      const worklogId = await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: t('worklog.submitting') },
-        () =>
-          this.worklog.submit({
-            workItem,
-            startedAt,
-            minutes,
-            description,
-          }),
-      );
-      if (task && segmentIds.length) {
-        const ends = new Set(
-          buildWorkSegments(this.store.getEvents(task.id))
-            .filter((segment) => segmentIds.includes(segment.id))
-            .map((segment) => segment.endEventId)
-            .filter((id): id is string => Boolean(id)),
-        );
-        await this.store.commit((draft) => {
-          for (const event of draft.events) {
-            if (ends.has(event.id)) {
-              event.worklogId = worklogId;
-            }
-          }
-        });
-        this.selectedTask = this.store.getTask(task.id);
-      }
-      void this.view?.webview.postMessage({ type: 'worklogResult', ok: true });
-      void vscode.window.showInformationMessage(t('worklog.success'));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      void this.view?.webview.postMessage({ type: 'worklogResult', ok: false, message });
+    const days = this.parseWorklogDays(payload);
+    if (!days.length) {
+      void this.view?.webview.postMessage({
+        type: 'worklogResult',
+        ok: false,
+        message: t('worklog.needSelect'),
+        submittedSegmentIds: [],
+        submittedDayKeys: [],
+      });
+      return;
     }
+
+    const task = this.selectedTask;
+    for (const day of days) {
+      const invalid = validateWorklogInput(day);
+      if (invalid) {
+        void this.view?.webview.postMessage({
+          type: 'worklogResult',
+          ok: false,
+          message: invalid,
+          failedDayKey: day.dayKey,
+          submittedSegmentIds: [],
+          submittedDayKeys: [],
+        });
+        return;
+      }
+    }
+
+    const submittedDayKeys: string[] = [];
+    const submittedSegmentIds: string[] = [];
+    let failedDayKey = '';
+    let failedDayLabel = '';
+    let failedMessage = '';
+
+    await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: t('worklog.submitting') },
+      async () => {
+        for (let index = 0; index < days.length; index += 1) {
+          const day = days[index];
+          try {
+            const worklogId = await this.worklog.submit({
+              workItem: day.workItem,
+              startedAt: day.startedAt,
+              minutes: day.minutes,
+              description: day.description,
+            });
+            submittedDayKeys.push(day.dayKey);
+            const remainingIds = new Set(days.slice(index + 1).flatMap((item) => item.segmentIds));
+            const markIds = day.segmentIds.filter((id) => !remainingIds.has(id));
+            if (task && markIds.length) {
+              await this.markSegmentsSubmitted(task.id, markIds, worklogId);
+              submittedSegmentIds.push(...markIds);
+            }
+          } catch (error) {
+            failedDayKey = day.dayKey;
+            failedDayLabel = day.dayLabel;
+            failedMessage = error instanceof Error ? error.message : String(error);
+            return;
+          }
+        }
+      },
+    );
+
+    if (task && submittedSegmentIds.length) {
+      this.selectedTask = this.store.getTask(task.id);
+      await this.pushState();
+    }
+
+    if (!failedMessage) {
+      void this.view?.webview.postMessage({
+        type: 'worklogResult',
+        ok: true,
+        submittedSegmentIds,
+        submittedDayKeys,
+      });
+      void vscode.window.showInformationMessage(
+        days.length > 1 ? t('worklog.successMulti', { count: days.length }) : t('worklog.success'),
+      );
+      return;
+    }
+
+    const message =
+      submittedDayKeys.length > 0
+        ? t('worklog.partialFail', {
+            done: submittedDayKeys.length,
+            date: failedDayLabel || failedDayKey,
+            message: failedMessage,
+          })
+        : failedMessage;
+    void this.view?.webview.postMessage({
+      type: 'worklogResult',
+      ok: false,
+      message,
+      failedDayKey,
+      submittedSegmentIds,
+      submittedDayKeys,
+    });
+  }
+
+  private parseWorklogDays(payload: Record<string, unknown>): Array<{
+    workItem: string;
+    startedAt: string;
+    minutes: number;
+    description: string;
+    segmentIds: string[];
+    dayKey: string;
+    dayLabel: string;
+  }> {
+    const raw = Array.isArray(payload.days) ? payload.days : [];
+    return raw.map((item) => {
+      const row = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+      return {
+        workItem: normalizeWorkItem(String(row.workItem ?? '')),
+        startedAt: String(row.startedAt ?? '').trim(),
+        minutes: Number.isFinite(Number(row.minutes)) ? Math.round(Number(row.minutes)) : 0,
+        description: String(row.description ?? ''),
+        segmentIds: Array.isArray(row.segmentIds) ? row.segmentIds.map((id) => String(id)) : [],
+        dayKey: String(row.dayKey ?? ''),
+        dayLabel: String(row.dayLabel ?? ''),
+      };
+    });
+  }
+
+  private async markSegmentsSubmitted(taskId: string, segmentIds: string[], worklogId: string): Promise<void> {
+    const ends = new Set(
+      buildWorkSegments(this.store.getEvents(taskId))
+        .filter((segment) => segmentIds.includes(segment.id))
+        .map((segment) => segment.endEventId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    if (ends.size === 0) {
+      return;
+    }
+    await this.store.commit((draft) => {
+      for (const event of draft.events) {
+        if (ends.has(event.id)) {
+          event.worklogId = worklogId;
+        }
+      }
+    });
   }
 
   private postError(message: string): void {

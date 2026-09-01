@@ -4,7 +4,7 @@ import { t } from '../i18n';
 import { CaptureError, captureWorklogAuth } from './capture';
 import { postWorklog } from './client';
 import { DEFAULT_WORKLOG_API, SECRET } from './constants';
-import { buildWorklogPayload, parseWorkItem, type WorklogSubmitInput } from './payload';
+import { buildWorklogPayload, parseWorkItem, validateWorklogInput, type WorklogSubmitInput } from './payload';
 
 export class WorklogService {
   constructor(
@@ -30,16 +30,42 @@ export class WorklogService {
     void vscode.window.showInformationMessage(t('worklog.loginOk'));
   }
 
+  async enterUserId(): Promise<void> {
+    const current = await this.resolveUserId();
+    const value = await vscode.window.showInputBox({
+      title: t('worklog.enterUserId'),
+      prompt: t('worklog.enterUserIdPrompt'),
+      placeHolder: t('worklog.enterUserIdPlaceholder'),
+      value: current,
+      ignoreFocusOut: true,
+      validateInput: (raw) => {
+        const id = raw.trim();
+        if (!id) {
+          return t('worklog.enterUserIdRequired');
+        }
+        if (!/^(\d{10,24}|ou_[a-zA-Z0-9]+)$/.test(id)) {
+          return t('worklog.enterUserIdInvalid');
+        }
+        return undefined;
+      },
+    });
+    if (value === undefined) {
+      return;
+    }
+    const id = value.trim();
+    await this.context.secrets.store(SECRET.userId, id);
+    await vscode.workspace.getConfiguration().update(CONFIG.worklogUserId, id, vscode.ConfigurationTarget.Global);
+    void vscode.window.showInformationMessage(t('worklog.enterUserIdOk'));
+  }
+
   async submit(input: WorklogSubmitInput): Promise<string> {
+    const invalid = validateWorklogInput(input);
+    if (invalid) {
+      throw new Error(invalid);
+    }
     const task = parseWorkItem(input.workItem);
     if (!task) {
       throw new Error(t('worklog.needWorkItem'));
-    }
-    if (!Number.isFinite(input.minutes) || input.minutes <= 0) {
-      throw new Error(t('worklog.needMinutes'));
-    }
-    if (!input.startedAt || Number.isNaN(Date.parse(input.startedAt))) {
-      throw new Error(t('worklog.needStarted'));
     }
 
     let key = (await this.context.secrets.get(SECRET.key)) ?? '';
@@ -110,9 +136,23 @@ export class WorklogService {
       });
     }
     if (!result.ok) {
-      throw new Error(result.message || t('worklog.submitFailed'));
+      throw new Error(this.localizeApiError(result.status, result.message));
     }
     return result.id || `ok:${Date.now()}`;
+  }
+
+  private localizeApiError(status: number, message: string): string {
+    const text = message.trim();
+    if (
+      status === 401 ||
+      /没有相关权限|请登录|unauthorized|not logged in|no permission/i.test(text)
+    ) {
+      return t('worklog.apiUnauthorized');
+    }
+    if (/开始时间不能是未来时间|cannot be in the future|future time/i.test(text)) {
+      return t('worklog.apiFutureTime');
+    }
+    return text || t('worklog.submitFailed');
   }
 
   private canRetryHeadful(error: unknown): boolean {

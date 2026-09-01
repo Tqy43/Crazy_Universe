@@ -104,6 +104,7 @@ export function registerCommands(
         showError(t('error.worklog'), error);
       }
     }),
+    vscode.commands.registerCommand(COMMANDS.enterWorklogUserId, () => worklog.enterUserId()),
     vscode.commands.registerCommand(COMMANDS.toggleLanguage, () => pickLanguage()),
     vscode.commands.registerCommand(COMMANDS.filterTimeline, () => timelineProvider.pickFilter()),
     vscode.commands.registerCommand(COMMANDS.startTask, async (item?: unknown) => {

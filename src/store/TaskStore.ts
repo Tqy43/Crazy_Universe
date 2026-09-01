@@ -1,7 +1,11 @@
-import { watch, type FSWatcher } from 'node:fs';
+import { Buffer } from 'node:buffer';
+import { watch } from 'node:fs';
+import type { FSWatcher } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { setTimeout, clearTimeout } from 'node:timers';
 import * as vscode from 'vscode';
+import { t } from '../i18n';
 import type { Event, Task } from '../types';
 import {
   assertInvariants,
@@ -13,7 +17,7 @@ import {
 
 export class StoreVersionError extends Error {
   constructor(public readonly foundVersion: number) {
-    super(`数据格式版本 ${foundVersion} 高于当前扩展，请升级 Crazy Universe。`);
+    super(t('error.storeTooNew', { version: foundVersion }));
   }
 }
 
@@ -22,7 +26,7 @@ export class TaskStore implements vscode.Disposable {
   private mtimeMs = 0;
   private writing = false;
   private watcher: FSWatcher | undefined;
-  private reloadTimer: NodeJS.Timeout | undefined;
+  private reloadTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly didChange = new vscode.EventEmitter<void>();
 
   readonly onDidChange = this.didChange.event;
@@ -123,7 +127,7 @@ export class TaskStore implements vscode.Disposable {
   }
 
   private watch(): void {
-    this.watcher = watch(this.storageDir, (_event, filename) => {
+    this.watcher = watch(this.storageDir, (_event: string, filename: string | Buffer | null) => {
       const name = filename?.toString();
       if (name && name !== 'tasks.json' && name !== 'tasks.json.tmp') {
         return;
@@ -172,18 +176,18 @@ async function readTasksFile(tasksPath: string): Promise<{ data: StoreFile; mtim
 
 function parseStoreFile(value: unknown): StoreFile {
   if (!value || typeof value !== 'object') {
-    throw new Error('任务库损坏：根对象无效。');
+    throw new Error(t('error.storeRoot'));
   }
   const record = value as Partial<StoreFile>;
   const version = record.schemaVersion ?? SCHEMA_VERSION;
   if (typeof version !== 'number') {
-    throw new Error('任务库损坏：缺少 schemaVersion。');
+    throw new Error(t('error.storeVersion'));
   }
   if (version > SCHEMA_VERSION) {
     throw new StoreVersionError(version);
   }
   if (!Array.isArray(record.tasks) || !Array.isArray(record.events)) {
-    throw new Error('任务库损坏：tasks / events 必须是数组。');
+    throw new Error(t('error.storeArrays'));
   }
   const data: StoreFile = {
     schemaVersion: SCHEMA_VERSION,

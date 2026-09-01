@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { WORKLOG_OBJECT_G, WORKLOG_SPACE_ID } from './constants';
 
 export interface WorklogTaskRef {
@@ -14,7 +15,7 @@ export interface WorklogSubmitInput {
 }
 
 export function parseWorkItem(raw: string): WorklogTaskRef | undefined {
-  const match = raw.trim().replace(/^#/, '').match(/^([a-zA-Z]+)-(\d+)$/);
+  const match = stripWorkItemHash(raw).match(/^([a-zA-Z]+)-(\d+)$/);
   if (!match?.[1] || !match[2]) {
     return undefined;
   }
@@ -28,6 +29,31 @@ export function parseWorkItem(raw: string): WorklogTaskRef | undefined {
   return { prefix, workItemId, workObjectId };
 }
 
+export function stripWorkItemHash(raw: string): string {
+  return raw.trim().replace(/^[＃#]+/, '').trim();
+}
+
+export function normalizeWorkItem(raw: string): string {
+  const parsed = parseWorkItem(raw);
+  if (!parsed) {
+    return stripWorkItemHash(raw);
+  }
+  return `#${parsed.prefix}-${parsed.workItemId}`;
+}
+
+export function validateWorklogInput(input: WorklogSubmitInput): string | undefined {
+  if (!parseWorkItem(input.workItem)) {
+    return t('worklog.needWorkItem');
+  }
+  if (!Number.isFinite(input.minutes) || input.minutes <= 0) {
+    return t('worklog.needMinutes');
+  }
+  if (!input.startedAt || Number.isNaN(Date.parse(input.startedAt))) {
+    return t('worklog.needStarted');
+  }
+  return undefined;
+}
+
 export function toApiDateStarted(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
@@ -39,7 +65,7 @@ export function toApiDateStarted(iso: string): string {
 export function buildWorklogPayload(input: WorklogSubmitInput, userId: string): Record<string, unknown> {
   const task = parseWorkItem(input.workItem);
   if (!task) {
-    throw new Error('invalid work item');
+    throw new Error(t('worklog.needWorkItem'));
   }
   const description = input.description.trim();
   return {
@@ -61,7 +87,7 @@ export function buildWorklogPayload(input: WorklogSubmitInput, userId: string): 
       is_empty: description.length === 0,
     },
     user_id: userId,
-    work_item_name: description || input.workItem.trim(),
+    work_item_name: description || normalizeWorkItem(input.workItem) || input.workItem.trim(),
   };
 }
 

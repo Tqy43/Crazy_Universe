@@ -1,4 +1,5 @@
 import { DISPLAY_COMMITS } from '../snapshot/gitParse';
+import { FEISHU_PREFIX_API, FEISHU_PROJECT_HOST } from '../feishu/links';
 import type { TimelineViewModel } from './timelineModel';
 
 function nonce(): string {
@@ -69,6 +70,10 @@ export function renderTimelineShell(): { html: string } {
       cursor: pointer;
       background: var(--vscode-button-secondaryBackground);
       color: var(--vscode-button-secondaryForeground);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
     }
     .btn.primary {
       background: var(--vscode-button-background);
@@ -136,8 +141,26 @@ export function renderTimelineShell(): { html: string } {
       border-radius: 4px;
       background: var(--vscode-editor-background, var(--vscode-sideBar-background));
     }
-    .segment.selected {
-      border-color: var(--vscode-focusBorder, var(--vscode-textLink-foreground));
+    .segment-foots {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .segment-cross {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      color: var(--vscode-descriptionForeground);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .segment-cross svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
     }
     .segment.open-seg { opacity: 0.72; }
     .segment-head {
@@ -151,11 +174,21 @@ export function renderTimelineShell(): { html: string } {
       min-width: 0;
       font-size: 12px;
     }
-    .segment-title strong { font-weight: 600; }
+    .segment-title strong {
+      font-weight: 600;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .segment-meta {
+      margin-top: 2px;
+      min-width: 0;
       color: var(--vscode-descriptionForeground);
       font-size: 11px;
-      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .worklog-fields {
       display: flex;
@@ -195,6 +228,36 @@ export function renderTimelineShell(): { html: string } {
       outline: 1px solid var(--vscode-focusBorder);
       outline-offset: -1px;
     }
+    .work-item-input {
+      display: flex;
+      align-items: stretch;
+      width: 100%;
+      min-height: 26px;
+      background: var(--vscode-input-background);
+      border: 1px solid var(--vscode-input-border, var(--vscode-dropdown-border));
+      border-radius: 2px;
+    }
+    .work-item-input:focus-within {
+      outline: 1px solid var(--vscode-focusBorder);
+      outline-offset: -1px;
+    }
+    .work-item-hash {
+      display: flex;
+      align-items: center;
+      padding: 0 0 0 8px;
+      color: var(--vscode-descriptionForeground);
+      user-select: none;
+    }
+    .work-item-input #workItem {
+      border: none;
+      width: auto;
+      flex: 1;
+      min-width: 0;
+      padding-left: 2px;
+    }
+    .work-item-input #workItem:focus {
+      outline: none;
+    }
     .worklog-row {
       display: grid;
       grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
@@ -210,9 +273,53 @@ export function renderTimelineShell(): { html: string } {
     }
     .worklog-panel-head {
       flex-shrink: 0;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
       padding: 10px 12px 6px;
       font-size: 13px;
       font-weight: 600;
+    }
+    .worklog-pager {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .worklog-step {
+      min-width: 2.5em;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--vscode-descriptionForeground);
+    }
+    .worklog-page-btn {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      color: var(--vscode-foreground);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .worklog-page-btn svg {
+      display: block;
+    }
+    .worklog-page-btn:hover:not(:disabled) {
+      color: var(--vscode-textLink-foreground);
+      background: transparent;
+    }
+    .worklog-page-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+    .worklog-cancel-all {
+      margin-right: auto;
     }
     .worklog-panel-sum {
       flex-shrink: 0;
@@ -251,6 +358,20 @@ export function renderTimelineShell(): { html: string } {
       font-size: 12px;
       line-height: 1.4;
     }
+    .worklog-error.ok {
+      color: var(--vscode-foreground);
+    }
+    .field-error {
+      margin: 2px 0 0;
+      color: var(--vscode-errorForeground);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+    .work-item-input.invalid,
+    .worklog-fields input.invalid {
+      outline: 1px solid var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
+      outline-offset: -1px;
+    }
     .worklog-login-link {
       display: inline;
       padding: 0;
@@ -267,10 +388,42 @@ export function renderTimelineShell(): { html: string } {
     .worklog-panel-foot {
       flex-shrink: 0;
       display: flex;
+      flex-wrap: nowrap;
       justify-content: flex-end;
+      align-items: center;
       gap: 6px;
+      min-width: 0;
       padding: 8px 12px 12px;
       border-top: 1px solid var(--vscode-sideBar-border, var(--vscode-widget-border));
+    }
+    .worklog-panel-foot .btn {
+      flex: 0 1 auto;
+    }
+    .worklog-panel-foot .btn.primary {
+      flex: 1 1 auto;
+    }
+    .work-item-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+    }
+    .work-item-jump {
+      border: none;
+      background: transparent;
+      padding: 0;
+      color: var(--vscode-textLink-foreground);
+      cursor: pointer;
+      font: inherit;
+      text-decoration: underline;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 58%;
+    }
+    .work-item-jump:hover {
+      color: var(--vscode-textLink-activeForeground);
     }
     .feed {
       position: relative;
@@ -451,17 +604,31 @@ export function renderTimelineShell(): { html: string } {
       <div id="worklogPanel" class="worklog-panel hidden">
         <div class="worklog-panel-head">
           <span id="worklogModalTitle">登记工时</span>
+          <div class="worklog-pager hidden" id="worklogPager">
+            <button type="button" id="worklogPrev" class="worklog-page-btn" aria-label="prev">
+              <svg width="16" height="16" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M31 36L19 24L31 12" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <span class="worklog-step" id="worklogStep">1/2</span>
+            <button type="button" id="worklogNext" class="worklog-page-btn" aria-label="next">
+              <svg width="16" height="16" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M19 12L31 24L19 36" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
         </div>
         <p class="worklog-panel-sum" id="worklogPanelSum"></p>
         <div class="worklog-panel-body">
           <div id="worklogFields" class="worklog-fields">
-            <label><span id="workItemLabel">工作项</span>
-              <input id="workItem" type="text" /></label>
+            <label><span class="work-item-head"><span id="workItemLabel">工作项</span>
+              <button type="button" class="work-item-jump hidden" id="workItemJump" data-href=""></button></span>
+              <span class="work-item-input" id="workItemWrap"><span class="work-item-hash" aria-hidden="true">#</span>
+              <input id="workItem" type="text" /></span>
+              <span class="field-error hidden" id="workItemError"></span></label>
             <div class="worklog-row">
               <label><span id="workStartedLabel">开始时间</span>
-                <input id="workStarted" type="datetime-local" /></label>
+                <input id="workStarted" type="datetime-local" />
+                <span class="field-error hidden" id="workStartedError"></span></label>
               <label><span id="workMinutesLabel">工时（分钟）</span>
-                <input id="workMinutes" type="number" min="0" step="1" /></label>
+                <input id="workMinutes" type="number" min="0" step="1" />
+                <span class="field-error hidden" id="workMinutesError"></span></label>
             </div>
             <label class="worklog-desc"><span id="workDescriptionLabel">说明</span>
               <textarea id="workDescription"></textarea></label>
@@ -469,6 +636,7 @@ export function renderTimelineShell(): { html: string } {
         </div>
         <p class="worklog-error hidden" id="worklogError"></p>
         <div class="worklog-panel-foot">
+          <button class="btn worklog-cancel-all hidden" id="worklogCancelAll" type="button">全部取消</button>
           <button class="btn" id="worklogCancel" type="button">取消</button>
           <button class="btn primary" id="worklogSave" type="button">确认登记</button>
         </div>
@@ -499,6 +667,8 @@ export function renderTimelineShell(): { html: string } {
     </div>
   <script nonce="${cspNonce}">
     const vscode = acquireVsCodeApi();
+    const FEISHU_HOST = ${JSON.stringify(FEISHU_PROJECT_HOST)};
+    const FEISHU_API = ${JSON.stringify(FEISHU_PREFIX_API)};
     const emptyEl = document.getElementById('empty');
     const pageEl = document.getElementById('page');
     const feedEl = document.getElementById('feed');
@@ -516,9 +686,20 @@ export function renderTimelineShell(): { html: string } {
     const worklogPanelEl = document.getElementById('worklogPanel');
     const worklogPanelSumEl = document.getElementById('worklogPanelSum');
     const workItemEl = document.getElementById('workItem');
+    const workItemWrapEl = document.getElementById('workItemWrap');
+    const workItemErrorEl = document.getElementById('workItemError');
+    const workItemJumpEl = document.getElementById('workItemJump');
     const workStartedEl = document.getElementById('workStarted');
+    const workStartedErrorEl = document.getElementById('workStartedError');
     const workMinutesEl = document.getElementById('workMinutes');
+    const workMinutesErrorEl = document.getElementById('workMinutesError');
     const workDescriptionEl = document.getElementById('workDescription');
+    const worklogStepEl = document.getElementById('worklogStep');
+    const worklogPagerEl = document.getElementById('worklogPager');
+    const worklogPrevEl = document.getElementById('worklogPrev');
+    const worklogNextEl = document.getElementById('worklogNext');
+    const worklogCancelEl = document.getElementById('worklogCancel');
+    const worklogCancelAllEl = document.getElementById('worklogCancelAll');
     const worklogSaveEl = document.getElementById('worklogSave');
     const worklogErrorEl = document.getElementById('worklogError');
     let ui = {};
@@ -527,6 +708,9 @@ export function renderTimelineShell(): { html: string } {
     let feedView = 'events';
     let worklogModalOpen = false;
     let worklogErrorTimer = 0;
+    let worklogQueue = [];
+    let worklogStep = 0;
+    let worklogSubmitting = false;
 
     function applyUi(next) {
       if (!next) {
@@ -547,9 +731,12 @@ export function renderTimelineShell(): { html: string } {
       document.getElementById('viewEvents').textContent = next.worklogViewEvents || '';
       document.getElementById('worklogRegister').textContent = next.worklogRegister || '';
       document.getElementById('worklogModalTitle').textContent = next.worklogTitle || '';
-      document.getElementById('worklogCancel').textContent = next.cancel || '';
       document.getElementById('worklogSave').textContent = next.worklogConfirm || '';
+      document.getElementById('worklogCancel').textContent = next.cancel || '';
+      document.getElementById('worklogCancelAll').textContent = next.worklogCancelAll || '';
       document.getElementById('workItemLabel').textContent = next.worklogWorkItem || '';
+      workItemEl.placeholder = '';
+      workItemJumpEl.title = next.worklogOpenWorkItem || '';
       document.getElementById('workStartedLabel').textContent = next.worklogStarted || '';
       document.getElementById('workMinutesLabel').textContent = next.worklogMinutesField || '';
       document.getElementById('workDescriptionLabel').textContent = next.worklogDescription || '';
@@ -567,6 +754,9 @@ export function renderTimelineShell(): { html: string } {
           option.textContent = kindMap[option.value];
         }
       });
+      if (worklogModalOpen && worklogQueue.length) {
+        updateWorklogChrome();
+      }
     }
 
     function showError(message) {
@@ -574,29 +764,97 @@ export function renderTimelineShell(): { html: string } {
       errorEl.classList.toggle('hidden', !message);
     }
 
-    function showWorklogError(message) {
+    function showWorklogError(message, ok) {
       window.clearTimeout(worklogErrorTimer);
       worklogErrorTimer = 0;
       if (!message) {
         worklogErrorEl.textContent = '';
         worklogErrorEl.classList.add('hidden');
+        worklogErrorEl.classList.remove('ok');
         return;
       }
-      worklogErrorEl.innerHTML = linkifyWorklogLogin(message);
+      worklogErrorEl.classList.toggle('ok', !!ok);
+      worklogErrorEl.innerHTML = ok ? escapeHtml(message) : linkifyWorklogLogin(message);
       worklogErrorEl.classList.remove('hidden');
       worklogErrorTimer = window.setTimeout(() => showWorklogError(''), 30000);
     }
 
+    function setFieldError(el, wrap, message) {
+      const text = message || '';
+      el.textContent = text;
+      el.classList.toggle('hidden', !text);
+      if (wrap) {
+        wrap.classList.toggle('invalid', !!text);
+      }
+    }
+
+    function clearFieldErrors() {
+      setFieldError(workItemErrorEl, workItemWrapEl, '');
+      setFieldError(workStartedErrorEl, workStartedEl, '');
+      setFieldError(workMinutesErrorEl, workMinutesEl, '');
+    }
+
+    function showDraftError(error) {
+      clearFieldErrors();
+      showWorklogError('');
+      if (!error || !error.message) {
+        return;
+      }
+      if (error.field === 'workItem') {
+        setFieldError(workItemErrorEl, workItemWrapEl, error.message);
+        return;
+      }
+      if (error.field === 'started') {
+        setFieldError(workStartedErrorEl, workStartedEl, error.message);
+        return;
+      }
+      if (error.field === 'minutes') {
+        setFieldError(workMinutesErrorEl, workMinutesEl, error.message);
+        return;
+      }
+      showWorklogError(error.message);
+    }
+
+    function routeWorklogError(message, ok) {
+      if (!message) {
+        clearFieldErrors();
+        showWorklogError('');
+        return;
+      }
+      if (ok) {
+        clearFieldErrors();
+        showWorklogError(message, true);
+        return;
+      }
+      if (message === ui.worklogNeedWorkItem) {
+        showDraftError({ field: 'workItem', message: message });
+        return;
+      }
+      if (message === ui.worklogNeedMinutes) {
+        showDraftError({ field: 'minutes', message: message });
+        return;
+      }
+      if (message === ui.worklogNeedStarted) {
+        showDraftError({ field: 'started', message: message });
+        return;
+      }
+      clearFieldErrors();
+      showWorklogError(message);
+    }
+
     function linkifyWorklogLogin(message) {
+      const label = ui.worklogLoginLink || (ui.lang === 'en' ? 'sign in' : '登录');
+      const button =
+        '<button type="button" class="worklog-login-link" data-worklog-login="1">' +
+        escapeHtml(label) +
+        '</button>';
       const escaped = escapeHtml(message);
       if (escaped.includes('登录')) {
         return escaped.split('登录').join(
           '<button type="button" class="worklog-login-link" data-worklog-login="1">登录</button>',
         );
       }
-      return escaped.replace(/sign in/gi, (match) =>
-        '<button type="button" class="worklog-login-link" data-worklog-login="1">' + match + '</button>',
-      );
+      return escaped.replace(/sign in/gi, () => button);
     }
 
     function showWorklogHint(message) {
@@ -617,11 +875,20 @@ export function renderTimelineShell(): { html: string } {
       feedEl.classList.toggle('hidden', !!open);
       worklogSaveEl.disabled = false;
       showWorklogError('');
+      clearFieldErrors();
       showError('');
       if (open) {
         showWorklogHint('');
-        fillWorklogForm();
+        startWorklogWizard();
         workItemEl.focus();
+      } else {
+        worklogQueue = [];
+        worklogStep = 0;
+        worklogSubmitting = false;
+        workItemEl.disabled = false;
+        workStartedEl.disabled = false;
+        workMinutesEl.disabled = false;
+        workDescriptionEl.disabled = false;
       }
       updateWorklogBar();
     }
@@ -696,20 +963,130 @@ export function renderTimelineShell(): { html: string } {
         .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
     }
 
-    function draftFromSelection() {
-      const selected = selectedSegments();
-      if (!selected.length) {
-        return { workItemText: '', startedAt: '', minutes: 0, description: '', details: [], selectedCount: 0 };
+    function stripWorkItemHash(text) {
+      return String(text || '').trim().replace(/^[＃#]+/, '').trim();
+    }
+
+    function storedWorkItem(text) {
+      const body = stripWorkItemHash(text);
+      const match = body.match(/^([a-zA-Z]+)-(\\d+)$/);
+      if (!match) {
+        return body;
       }
-      const commits = selected.flatMap((segment) => segment.commits || [])
-        .filter((commit) => readableFeishu(commit.feishuText))
-        .sort((a, b) => {
-          const byTime = String(b.authorTime || '').localeCompare(String(a.authorTime || ''));
-          return byTime !== 0 ? byTime : String(b.hash || '').localeCompare(String(a.hash || ''));
-        });
-      const latest = commits[0];
-      const fallback = state.taskWorkItem || {};
-      const workItemText = latest ? latest.feishuText : (fallback.text || '');
+      return '#' + match[1].toLowerCase() + '-' + match[2];
+    }
+
+    function hrefForWorkItem(text) {
+      const match = stripWorkItemHash(text).match(/^([a-zA-Z]+)-(\\d+)$/);
+      if (!match) {
+        return '';
+      }
+      const api = FEISHU_API[match[1].toLowerCase()] || match[1].toLowerCase();
+      return FEISHU_HOST + '/' + api + '/detail/' + encodeURIComponent(match[2]);
+    }
+
+    function syncWorkItemJump() {
+      const stored = storedWorkItem(workItemEl.value);
+      const href = hrefForWorkItem(stored);
+      workItemJumpEl.textContent = href ? stored : '';
+      workItemJumpEl.setAttribute('data-href', href);
+      workItemJumpEl.classList.toggle('hidden', !href);
+    }
+
+    workItemEl.addEventListener('input', () => {
+      const cleaned = stripWorkItemHash(workItemEl.value);
+      if (cleaned !== workItemEl.value) {
+        const cursor = workItemEl.selectionStart;
+        workItemEl.value = cleaned;
+        if (typeof cursor === 'number') {
+          workItemEl.setSelectionRange(Math.max(0, cursor - 1), Math.max(0, cursor - 1));
+        }
+      }
+      syncWorkItemJump();
+      stashCurrentWorklogStep();
+      setFieldError(workItemErrorEl, workItemWrapEl, '');
+    });
+    workStartedEl.addEventListener('input', () => {
+      stashCurrentWorklogStep();
+      setFieldError(workStartedErrorEl, workStartedEl, '');
+    });
+    workMinutesEl.addEventListener('input', () => {
+      stashCurrentWorklogStep();
+      setFieldError(workMinutesErrorEl, workMinutesEl, '');
+    });
+    workDescriptionEl.addEventListener('input', () => {
+      stashCurrentWorklogStep();
+    });
+
+    function localDayKey(iso) {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) {
+        return '';
+      }
+      return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+    }
+
+    function formatLocalDayTitle(iso) {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) {
+        return iso || '';
+      }
+      if (ui.lang === 'en') {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+      return (date.getMonth() + 1) + '月' + date.getDate() + '日';
+    }
+
+    function startOfLocalDay(date) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    function splitSegmentByLocalDays(segment) {
+      const startMs = Date.parse(segment.startedAt);
+      const endIso = segment.endedAt || segment.startedAt;
+      const endMs = Date.parse(endIso);
+      const startDay = localDayKey(segment.startedAt);
+      const endDay = localDayKey(endIso);
+      const crosses = !!(startDay && endDay && startDay !== endDay);
+      const fallback = {
+        dayKey: startDay || segment.startedAt,
+        startedAt: segment.startedAt,
+        minutes: segment.minutes || 0,
+        segment: segment,
+        notes: segment.notes || [],
+        fromCrossDay: crosses,
+      };
+      if (!segment.closed || !Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+        return [fallback];
+      }
+      const slices = [];
+      let cursor = startOfLocalDay(new Date(startMs));
+      while (cursor.getTime() < endMs) {
+        const next = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1);
+        const sliceStart = Math.max(startMs, cursor.getTime());
+        const sliceEnd = Math.min(endMs, next.getTime());
+        const minutes = Math.round((sliceEnd - sliceStart) / 60000);
+        if (minutes > 0) {
+          const startedAt = new Date(sliceStart).toISOString();
+          const dayKey = localDayKey(startedAt) || fallback.dayKey;
+          slices.push({
+            dayKey: dayKey,
+            startedAt: startedAt,
+            minutes: minutes,
+            segment: segment,
+            notes: (segment.notes || []).filter((note) => localDayKey(note.createdAt) === dayKey),
+            fromCrossDay: crosses,
+          });
+        }
+        cursor = next;
+        if (slices.length > 366) {
+          break;
+        }
+      }
+      return slices.length ? slices : [fallback];
+    }
+
+    function notesFromSlices(slices) {
       const kindLabels = {
         change: ui.noteChange,
         action: ui.noteAction,
@@ -721,26 +1098,81 @@ export function renderTimelineShell(): { html: string } {
       };
       const blocks = [];
       let previousFolder;
-      selected.forEach((segment) => {
-        (segment.notes || []).forEach((note) => {
-          const folder = note.workspaceFolder || segment.workspaceFolder;
+      slices.forEach((slice) => {
+        (slice.notes || []).forEach((note) => {
+          const folder = note.workspaceFolder || slice.segment.workspaceFolder;
           if (folder && folder !== previousFolder) {
-            blocks.push('【' + folder + '】');
+            blocks.push((ui.worklogFolderMark || '【{folder}】').replace('{folder}', folder));
             previousFolder = folder;
           }
           const kind = kindLabels[note.noteKind] || '';
           blocks.push(clockLabel(note.createdAt) + (kind ? ' ' + kind : '') + '\\n' + (note.body || ''));
         });
       });
+      return blocks.join('\\n\\n');
+    }
+
+    function latestFeishuFromSlices(slices, dayKey) {
+      const all = slices.flatMap((slice) => slice.segment.commits || [])
+        .filter((commit) => readableFeishu(commit.feishuText));
+      const onDay = all.filter((commit) => localDayKey(commit.authorTime) === dayKey);
+      const pool = (onDay.length ? onDay : all).slice().sort((a, b) => {
+        const byTime = String(b.authorTime || '').localeCompare(String(a.authorTime || ''));
+        return byTime !== 0 ? byTime : String(b.hash || '').localeCompare(String(a.hash || ''));
+      });
+      return pool[0];
+    }
+
+    function draftFromSelection() {
+      const selected = selectedSegments();
+      if (!selected.length) {
+        return { minutes: 0, selectedCount: 0, days: [] };
+      }
+      const fallback = state.taskWorkItem || {};
+      const groups = [];
+      const indexByDay = {};
+      selected.forEach((segment) => {
+        splitSegmentByLocalDays(segment).forEach((slice) => {
+          if (!indexByDay[slice.dayKey]) {
+            indexByDay[slice.dayKey] = { key: slice.dayKey, slices: [] };
+            groups.push(indexByDay[slice.dayKey]);
+          }
+          indexByDay[slice.dayKey].slices.push(slice);
+        });
+      });
+      groups.forEach((group) => {
+        group.slices.sort((a, b) => String(a.startedAt).localeCompare(String(b.startedAt)));
+      });
+      const days = groups.map((group) => {
+        const startedAt = group.slices[0].startedAt;
+        const minutes = group.slices.reduce((sum, slice) => sum + (slice.minutes || 0), 0);
+        const latest = latestFeishuFromSlices(group.slices, group.key);
+        return {
+          dayKey: group.key,
+          dayLabel: formatLocalDayTitle(startedAt),
+          startedAt: startedAt,
+          minutes: minutes,
+          description: notesFromSlices(group.slices),
+          segmentIds: Array.from(new Set(group.slices.map((slice) => slice.segment.id))),
+          segmentCount: group.slices.length,
+          workItemText: latest ? latest.feishuText : (fallback.text || ''),
+          fromCrossDay: group.slices.some((slice) => slice.fromCrossDay),
+        };
+      });
       return {
-        workItemText,
-        workItemHref: latest ? latest.feishuHref : fallback.href,
-        startedAt: selected[0].startedAt,
-        minutes: selected.reduce((sum, segment) => sum + (segment.minutes || 0), 0),
-        description: blocks.join('\\n\\n'),
-        details: selected.map((segment) => formatDuration(segment.minutes) + ' ' + (segment.workspaceFolder || '')),
+        minutes: days.reduce((sum, day) => sum + day.minutes, 0),
         selectedCount: selected.length,
+        days: days,
       };
+    }
+
+    function panelSummaryForDay(day) {
+      const key = day.fromCrossDay && ui.worklogDayTitleCross ? 'worklogDayTitleCross' : 'worklogDayTitle';
+      return fillTemplate(ui[key] || ui.worklogDayTitle, {
+        date: day.dayLabel,
+        count: day.segmentCount,
+        duration: formatDuration(day.minutes),
+      });
     }
 
     function updateWorklogBar() {
@@ -757,15 +1189,151 @@ export function renderTimelineShell(): { html: string } {
       }
     }
 
-    function fillWorklogForm() {
+    function startWorklogWizard() {
       const draft = draftFromSelection();
-      workItemEl.value = draft.workItemText || '';
-      workStartedEl.value = toDatetimeLocal(draft.startedAt);
-      workMinutesEl.value = draft.selectedCount ? String(draft.minutes) : '';
-      workDescriptionEl.value = draft.description || '';
-      worklogPanelSumEl.textContent = draft.selectedCount
-        ? fillTemplate(ui.worklogBarSelected, { count: draft.selectedCount, duration: formatDuration(draft.minutes) })
-        : (ui.worklogBarEmpty || '');
+      worklogQueue = draft.days.map((day) => Object.assign({ status: 'pending' }, day));
+      worklogStep = 0;
+      loadWorklogStepFields();
+      updateWorklogChrome();
+    }
+
+    function stashCurrentWorklogStep() {
+      const day = worklogQueue[worklogStep];
+      if (!day || day.status === 'submitted') {
+        return;
+      }
+      day.workItemText = storedWorkItem(workItemEl.value);
+      day.startedAt = fromDatetimeLocal(workStartedEl.value) || day.startedAt;
+      day.minutes = Number(workMinutesEl.value);
+      day.description = workDescriptionEl.value;
+    }
+
+    function pendingDaysPayload() {
+      stashCurrentWorklogStep();
+      return worklogQueue
+        .filter((day) => day.status === 'pending')
+        .map((day) => ({
+          workItem: storedWorkItem(day.workItemText),
+          startedAt: day.startedAt,
+          minutes: day.minutes,
+          description: day.description || '',
+          segmentIds: (day.segmentIds || []).map(String),
+          dayKey: day.dayKey,
+          dayLabel: day.dayLabel,
+        }));
+    }
+
+    function validateDayDraft(day) {
+      const workItem = stripWorkItemHash(day.workItemText || '');
+      if (!/^[a-zA-Z]+-\\d+$/.test(workItem) || !(Number(workItem.split('-')[1]) > 0)) {
+        return { field: 'workItem', message: ui.worklogNeedWorkItem || '' };
+      }
+      const minutes = Number(day.minutes);
+      if (!Number.isFinite(minutes) || minutes <= 0) {
+        return { field: 'minutes', message: ui.worklogNeedMinutes || '' };
+      }
+      if (!day.startedAt || Number.isNaN(Date.parse(day.startedAt))) {
+        return { field: 'started', message: ui.worklogNeedStarted || '' };
+      }
+      return null;
+    }
+
+    function firstInvalidPendingIndex() {
+      return worklogQueue.findIndex((day) => day.status === 'pending' && validateDayDraft(day));
+    }
+
+    function goWorklogStep(index) {
+      if (worklogSubmitting || index < 0 || index >= worklogQueue.length || index === worklogStep) {
+        return;
+      }
+      stashCurrentWorklogStep();
+      worklogStep = index;
+      loadWorklogStepFields();
+      updateWorklogChrome();
+      showWorklogError('');
+      clearFieldErrors();
+    }
+
+    function queuedSegmentIds(exceptIndex) {
+      const ids = new Set();
+      worklogQueue.forEach((day, index) => {
+        if (index === exceptIndex || day.status === 'submitted') {
+          return;
+        }
+        (day.segmentIds || []).forEach((id) => ids.add(String(id)));
+      });
+      return ids;
+    }
+
+    function closeCurrentWorklogStep() {
+      if (worklogSubmitting) {
+        return;
+      }
+      const day = worklogQueue[worklogStep];
+      if (day && day.status !== 'submitted') {
+        const still = queuedSegmentIds(worklogStep);
+        const drop = new Set((day.segmentIds || []).map(String).filter((id) => !still.has(id)));
+        selectedIds = selectedIds.filter((id) => !drop.has(id));
+        renderFeed();
+      }
+      worklogQueue.splice(worklogStep, 1);
+      if (!worklogQueue.length) {
+        setWorklogModal(false);
+        return;
+      }
+      if (worklogStep >= worklogQueue.length) {
+        worklogStep = worklogQueue.length - 1;
+      }
+      loadWorklogStepFields();
+      updateWorklogChrome();
+      showWorklogError('');
+      clearFieldErrors();
+    }
+
+    function loadWorklogStepFields() {
+      const day = worklogQueue[worklogStep];
+      if (!day) {
+        worklogPanelSumEl.textContent = ui.worklogBarEmpty || '';
+        return;
+      }
+      workStartedEl.value = toDatetimeLocal(day.startedAt);
+      workMinutesEl.value = String(day.minutes || 0);
+      workDescriptionEl.value = day.description || '';
+      workItemEl.value = stripWorkItemHash(day.workItemText || '');
+      syncWorkItemJump();
+    }
+
+    function updateWorklogChrome() {
+      const day = worklogQueue[worklogStep];
+      const total = worklogQueue.length;
+      const multi = total > 1;
+      worklogPagerEl.classList.toggle('hidden', !multi);
+      worklogCancelAllEl.classList.toggle('hidden', !multi);
+      worklogCancelEl.textContent = ui.cancel || '';
+      if (!day) {
+        return;
+      }
+      worklogStepEl.textContent = fillTemplate(ui.worklogStep, {
+        current: worklogStep + 1,
+        total: total,
+      });
+      worklogPrevEl.disabled = worklogSubmitting || worklogStep <= 0;
+      worklogNextEl.disabled = worklogSubmitting || worklogStep >= total - 1;
+      worklogPanelSumEl.textContent = panelSummaryForDay(day);
+      const submitted = day.status === 'submitted';
+      const lastPage = worklogStep === total - 1;
+      const nextLabel = ui.worklogNext || '';
+      const confirmLabel = submitted ? (ui.worklogSubmitted || '') : (ui.worklogConfirm || '');
+      worklogSaveEl.classList.remove('hidden');
+      worklogSaveEl.textContent = lastPage ? confirmLabel : nextLabel;
+      worklogSaveEl.title = worklogSaveEl.textContent;
+      worklogSaveEl.disabled = worklogSubmitting || (lastPage && submitted);
+      worklogCancelEl.title = worklogCancelEl.textContent;
+      worklogCancelAllEl.title = worklogCancelAllEl.textContent;
+      workItemEl.disabled = submitted;
+      workStartedEl.disabled = submitted;
+      workMinutesEl.disabled = submitted;
+      workDescriptionEl.disabled = submitted;
     }
 
     function setFeedView(next) {
@@ -804,6 +1372,12 @@ export function renderTimelineShell(): { html: string } {
       updateWorklogBar();
     }
 
+    function segmentFootItem(label, paths) {
+      return '<div class="segment-cross">' +
+        '<svg width="14" height="14" viewBox="0 0 48 48" fill="none" aria-hidden="true">' + paths + '</svg>' +
+        '<span>' + escapeHtml(label) + '</span></div>';
+    }
+
     function renderSegments(segments) {
       if (!segments.length) {
         feedEl.innerHTML = '<p class="meta">' + escapeHtml(ui.worklogNone || '') + '</p>';
@@ -819,20 +1393,57 @@ export function renderTimelineShell(): { html: string } {
         const disabled = segment.selectable ? '' : ' disabled';
         const selectedClass = checked ? ' selected' : '';
         const openClass = segment.closed ? '' : ' open-seg';
-        const duration = segment.openLabel || segment.durationLabel;
-        const switched = segment.workspaceChanged
-          ? ' · ' + escapeHtml(ui.worklogSwitched || '')
-          : '';
-        const submitted = segment.submitted
-          ? ' · ' + escapeHtml(ui.worklogSubmitted || '')
+        const duration = segment.durationLabel;
+        const foots = [];
+        if (!segment.closed) {
+          foots.push(segmentFootItem(
+            ui.worklogInProgress || '',
+            '<path d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>' +
+            '<path d="M31 31C31 31 29 35 24 35C19 35 17 31 17 31" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M33 20H29" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M17 18V22" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+          ));
+        }
+        if (segment.crossedDays) {
+          foots.push(segmentFootItem(
+            ui.worklogCrossedDays || '',
+            '<path d="M14 25C14 19.4772 18.4772 15 24 15C29.5228 15 34 19.4772 34 25V41H14V25Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>' +
+            '<path d="M24 5V8" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M35.8918 9.32823L33.9634 11.6264" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M42.2187 20.2873L39.2642 20.8083" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M5.78116 20.2874L8.73558 20.8083" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M12.1086 9.32802L14.037 11.6262" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M6 41H43" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+          ));
+        }
+        if (segment.workspaceChanged) {
+          foots.push(segmentFootItem(
+            ui.worklogSwitched || '',
+            '<rect x="6" y="12" width="36" height="30" rx="2" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>' +
+            '<path d="M17.9497 24.0083L29.9497 24.0083" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M6 13L13 5H35L42 13" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+          ));
+        }
+        if (segment.submitted) {
+          foots.push(segmentFootItem(
+            ui.worklogSubmitted || '',
+            '<path d="M24 44C29.5228 44 34.5228 41.7614 38.1421 38.1421C41.7614 34.5228 44 29.5228 44 24C44 18.4772 41.7614 13.4772 38.1421 9.85786C34.5228 6.23858 29.5228 4 24 4C18.4772 4 13.4772 6.23858 9.85786 9.85786C6.23858 13.4772 4 18.4772 4 24C4 29.5228 6.23858 34.5228 9.85786 38.1421C13.4772 41.7614 18.4772 44 24 44Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>' +
+            '<path d="M16 24L22 30L34 18" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+          ));
+        }
+        const crossClass = segment.crossedDays ? ' cross-day' : '';
+        const crossFoot = foots.length
+          ? '<div class="segment-foots">' + foots.join('') + '</div>'
           : '';
         return date +
-          '<article class="segment' + selectedClass + openClass + '" data-segment="' + escapeHtml(segment.id) + '">' +
+          '<article class="segment' + selectedClass + openClass + crossClass + '" data-segment="' + escapeHtml(segment.id) + '">' +
           '<label class="segment-head">' +
           '<input type="checkbox" data-segment-check="' + escapeHtml(segment.id) + '"' + checked + disabled + ' />' +
           '<span class="segment-title"><strong>' + escapeHtml(segment.rangeLabel) +
           '  ' + escapeHtml(duration) + '</strong>' +
-          '<div class="segment-meta">' + escapeHtml(segment.workspaceLabel || '') + switched + submitted + '</div></span></label></article>';
+          '<div class="segment-meta">' + escapeHtml(segment.workspaceLabel || '') +
+          '</div></span></label>' +
+          crossFoot + '</article>';
       }).join('');
     }
 
@@ -913,17 +1524,46 @@ export function renderTimelineShell(): { html: string } {
         return;
       }
       if (message.type === 'worklogResult') {
-        worklogSaveEl.disabled = false;
+        worklogSubmitting = false;
+        const submitted = Array.isArray(message.submittedSegmentIds)
+          ? message.submittedSegmentIds.map(String)
+          : [];
+        if (submitted.length) {
+          const done = new Set(submitted);
+          selectedIds = selectedIds.filter((id) => !done.has(id));
+          renderFeed();
+        }
+        const submittedKeys = new Set(
+          (Array.isArray(message.submittedDayKeys) ? message.submittedDayKeys : []).map(String),
+        );
+        if (submittedKeys.size) {
+          worklogQueue.forEach((day) => {
+            if (submittedKeys.has(String(day.dayKey))) {
+              day.status = 'submitted';
+            }
+          });
+        }
         if (message.ok) {
           setWorklogModal(false);
         } else if (message.message) {
-          showWorklogError(message.message);
+          const failedKey = String(message.failedDayKey || '');
+          const failedIndex = worklogQueue.findIndex((day) => String(day.dayKey) === failedKey);
+          if (failedIndex >= 0) {
+            worklogStep = failedIndex;
+            loadWorklogStepFields();
+          }
+          routeWorklogError(message.message);
+          updateWorklogChrome();
+        } else {
+          updateWorklogChrome();
         }
         return;
       }
       if (message.type === 'worklogLoginResult') {
         if (message.ok) {
-          showWorklogError('');
+          const captured = ui.worklogLoginOk || '';
+          const resubmit = ui.worklogLoginResubmit || '';
+          showWorklogError([captured, resubmit].filter(Boolean).join(' '), true);
         } else if (message.message) {
           showWorklogError(message.message);
         }
@@ -961,9 +1601,6 @@ export function renderTimelineShell(): { html: string } {
       document.getElementById('viewEvents').classList.toggle('active', feedView === 'events');
       renderFeed();
       reportFeedView();
-      if (worklogModalOpen) {
-        fillWorklogForm();
-      }
       gitHintTextEl.textContent = state.gitHint || '';
       gitHintEl.classList.toggle('hidden', !state.gitHint);
       if (!state.task.canNote) setComposer(false);
@@ -1000,25 +1637,55 @@ export function renderTimelineShell(): { html: string } {
         setWorklogModal(true);
         return;
       }
-      if (target.closest('#worklogCancel')) {
+      if (target.closest('#worklogPrev')) {
+        goWorklogStep(worklogStep - 1);
+        return;
+      }
+      if (target.closest('#worklogNext')) {
+        goWorklogStep(worklogStep + 1);
+        return;
+      }
+      if (target.closest('#worklogCancelAll')) {
         setWorklogModal(false);
         return;
       }
-      if (target.closest('#worklogSave')) {
-        if (!selectedSegments().length) {
-          showWorklogHint(ui.worklogNeedSelect || '');
+      if (target.closest('#worklogCancel')) {
+        if (worklogQueue.length > 1) {
+          closeCurrentWorklogStep();
+        } else {
           setWorklogModal(false);
+        }
+        return;
+      }
+      if (target.closest('#worklogSave')) {
+        const total = worklogQueue.length;
+        if (total > 1 && worklogStep !== total - 1) {
+          goWorklogStep(worklogStep + 1);
+          return;
+        }
+        const day = worklogQueue[worklogStep];
+        if (!day || day.status === 'submitted') {
+          return;
+        }
+        const days = pendingDaysPayload();
+        if (!days.length) {
+          return;
+        }
+        const invalidIndex = firstInvalidPendingIndex();
+        if (invalidIndex >= 0) {
+          worklogStep = invalidIndex;
+          loadWorklogStepFields();
+          showDraftError(validateDayDraft(worklogQueue[invalidIndex]));
+          updateWorklogChrome();
           return;
         }
         showWorklogError('');
+        clearFieldErrors();
+        worklogSubmitting = true;
         worklogSaveEl.disabled = true;
         vscode.postMessage({
           type: 'worklogConfirm',
-          workItem: workItemEl.value,
-          startedAt: fromDatetimeLocal(workStartedEl.value),
-          minutes: Number(workMinutesEl.value),
-          description: workDescriptionEl.value,
-          segmentIds: selectedIds.slice(),
+          days: days,
         });
         return;
       }
@@ -1085,9 +1752,6 @@ export function renderTimelineShell(): { html: string } {
         selectedIds = selectedIds.filter((item) => item !== id);
       }
       renderFeed();
-      if (worklogModalOpen) {
-        fillWorklogForm();
-      }
     });
     document.getElementById('collapse').addEventListener('click', () => setComposer(false));
     document.getElementById('cancel').addEventListener('click', () => {

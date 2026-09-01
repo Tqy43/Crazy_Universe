@@ -1,5 +1,5 @@
 {
-  "extension.description": "Manage multiple development task contexts and record your workflow locally, privacy-first.",
+  "extension.description": "Manage multiple development task contexts and record your workflow.",
   "view.tasks": "Tasks",
   "view.timeline": "Timeline",
   "command.newTask": "New Task",
@@ -14,6 +14,7 @@
   "command.toggleLanguage": "Language",
   "command.openTools": "Tools",
   "command.loginWorklog": "Sign in to Feishu Worklog",
+  "command.enterWorklogUserId": "Enter worklog user ID",
   "command.filterTimeline": "Filter Timeline",
   "command.deleteTask": "Delete Task",
   "command.renameTask": "Rename Task",
@@ -26,5 +27,5 @@
   "config.locale.zh-cn": "Chinese",
   "config.worklog.enabled": "Enable experimental Feishu worklog plugin sync (in-house plugin only, not official work-hour management; not generally applicable)",
   "config.worklog.running": "Whether the Feishu worklog tool is currently running",
-  "config.worklog.userId": "Feishu worklog user id (used if sniffing does not capture it)"
+  "config.worklog.userId": "Feishu worklog user id. If sign-in still reports a missing user id, search for this setting and paste the id (digits, or starting with ou_)."
 }

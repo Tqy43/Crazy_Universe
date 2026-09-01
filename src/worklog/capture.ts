@@ -1,4 +1,8 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { Buffer } from 'node:buffer';
+import { spawn } from 'node:child_process';
+import { setTimeout, clearTimeout } from 'node:timers';
+import { URL, URLSearchParams } from 'node:url';
+import type { ChildProcess } from 'node:child_process';
 import { CDP_PORT, WORKLOG_BOARD_URL, WORKLOG_HOST_HINT } from './constants';
 import { debuggerUrl, openCdp, type CdpClient } from './cdp';
 import { portOpen, resolveChromePath, worklogProfileDir } from './chrome';
@@ -42,7 +46,7 @@ export async function captureWorklogAuth(options: {
       flags.push('--headless=new', '--window-size=1280,900');
     }
     options.log(options.headful ? 'launching Chrome (login window)' : 'launching Chrome (headless)');
-    chromeProc = spawn(chromePath, flags, {
+    chromeProc = spawn(chromePath, [...flags, WORKLOG_BOARD_URL], {
       stdio: 'ignore',
       windowsHide: !options.headful,
       detached: false,
@@ -51,9 +55,14 @@ export async function captureWorklogAuth(options: {
     options.log('reusing Chrome debug session');
   }
 
-  const stopHeadless = () => {
-    if (chromeProc && !options.headful) {
+  const stopSpawnedChrome = () => {
+    if (!chromeProc) {
+      return;
+    }
+    try {
       chromeProc.kill();
+    } catch {
+      /* ignore */
     }
   };
 
@@ -61,7 +70,7 @@ export async function captureWorklogAuth(options: {
   try {
     cdp = await openCdp(await debuggerUrl(CDP_PORT));
   } catch (error) {
-    stopHeadless();
+    stopSpawnedChrome();
     throw new CaptureError(error instanceof Error ? error.message : String(error), 'cdp');
   }
 
@@ -84,17 +93,26 @@ export async function captureWorklogAuth(options: {
       if (userIdWait) {
         clearTimeout(userIdWait);
       }
-      cdp.close();
-      stopHeadless();
-      if (error) {
-        reject(error);
+      const complete = () => {
+        cdp.close();
+        if (!options.headful || auth) {
+          stopSpawnedChrome();
+        }
+        if (error) {
+          reject(error);
+          return;
+        }
+        if (!auth) {
+          reject(new CaptureError('timed out waiting for x-worklog-key', 'timeout'));
+          return;
+        }
+        resolve({ ...auth, userId: auth.userId ?? userId, apiUrl: auth.apiUrl ?? apiUrl });
+      };
+      if (auth && options.headful) {
+        void closeBoardPages(cdp).finally(complete);
         return;
       }
-      if (!auth) {
-        reject(new CaptureError('timed out waiting for x-worklog-key', 'timeout'));
-        return;
-      }
-      resolve({ ...auth, userId: auth.userId ?? userId, apiUrl: auth.apiUrl ?? apiUrl });
+      complete();
     };
 
     const settleAuth = () => {
@@ -315,7 +333,7 @@ export async function captureWorklogAuth(options: {
           flatten: true,
         });
         await attachExistingTargets(cdp);
-        await cdp.send('Target.createTarget', { url: WORKLOG_BOARD_URL });
+        await openOrReloadBoard(cdp);
         options.log(`opened board, waiting up to ${Math.round(timeoutMs / 1000)}s`);
       } catch (error) {
         clearTimeout(timer);
@@ -330,7 +348,7 @@ export async function captureWorklogAuth(options: {
 async function attachExistingTargets(cdp: CdpClient): Promise<void> {
   try {
     const listed = (await cdp.send('Target.getTargets')) as {
-      targetInfos?: Array<{ targetId: string; type: string }>;
+      targetInfos?: Array<{ targetId: string; type: string; url?: string }>;
     };
     for (const info of listed.targetInfos ?? []) {
       if (info.type === 'page' || info.type === 'iframe' || info.type === 'webview') {
@@ -344,6 +362,60 @@ async function attachExistingTargets(cdp: CdpClient): Promise<void> {
   } catch {
     /* older chrome */
   }
+}
+
+async function openOrReloadBoard(cdp: CdpClient): Promise<void> {
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
+    const board = await findBoardPage(cdp);
+    if (board) {
+      try {
+        await cdp.send('Target.activateTarget', { targetId: board.targetId });
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    await delay(250);
+  }
+  await cdp.send('Target.createTarget', { url: WORKLOG_BOARD_URL });
+}
+
+async function findBoardPage(cdp: CdpClient): Promise<{ targetId: string } | undefined> {
+  try {
+    const listed = (await cdp.send('Target.getTargets')) as {
+      targetInfos?: Array<{ targetId: string; type: string; url?: string }>;
+    };
+    return (listed.targetInfos ?? []).find(
+      (info) => info.type === 'page' && isBoardUrl(String(info.url ?? '')),
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+async function closeBoardPages(cdp: CdpClient): Promise<void> {
+  try {
+    const listed = (await cdp.send('Target.getTargets')) as {
+      targetInfos?: Array<{ targetId: string; type: string; url?: string }>;
+    };
+    for (const info of listed.targetInfos ?? []) {
+      const url = String(info.url ?? '');
+      if (info.type === 'page' && (isBoardUrl(url) || url.includes('feishu.cn') || url.includes('larkoffice.com'))) {
+        try {
+          await cdp.send('Target.closeTarget', { targetId: info.targetId });
+        } catch {
+          /* already gone */
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function armSession(cdp: CdpClient, sessionId: string): Promise<void> {
@@ -374,16 +446,19 @@ async function armSession(cdp: CdpClient, sessionId: string): Promise<void> {
 }
 
 async function refreshBoard(cdp: CdpClient, sessionId: string, url: string): Promise<void> {
+  if (!isBoardUrl(url)) {
+    return;
+  }
   try {
     await cdp.send('Page.enable', {}, sessionId);
-    if (url.includes('project.feishu.cn') || url.includes('meegoPlg')) {
-      await cdp.send('Page.reload', { ignoreCache: false }, sessionId);
-    } else if (!url || url === 'about:blank' || url.startsWith('chrome://')) {
-      await cdp.send('Page.navigate', { url: WORKLOG_BOARD_URL }, sessionId);
-    }
+    await cdp.send('Page.reload', { ignoreCache: false }, sessionId);
   } catch {
     /* page domain unavailable */
   }
+}
+
+function isBoardUrl(url: string): boolean {
+  return url.includes('meegoPlg') || url.includes('MII_686B6DA98EC9C002') || url.includes('/b2rl2h/');
 }
 
 function isValidKeyUrl(url: string): boolean {
