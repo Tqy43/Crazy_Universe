@@ -94,6 +94,7 @@ export interface TimelineSegmentRow {
   workspacePath: string;
   workspaceChanged: boolean;
   openLabel?: string;
+  submitted: boolean;
   notes: WorkSegment['notes'];
   commits: WorkSegment['commits'];
 }
@@ -342,6 +343,7 @@ export function buildTimelineViewModel(input: {
 }
 
 export function buildSegmentRows(events: Event[], nowIso?: string): TimelineSegmentRow[] {
+  const byId = new Map(events.map((event) => [event.id, event]));
   return buildWorkSegments(events, nowIso)
     .slice()
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
@@ -361,6 +363,7 @@ export function buildSegmentRows(events: Event[], nowIso?: string): TimelineSegm
         workspacePath: segment.workspacePath,
         workspaceChanged: segment.workspaceChanged,
         openLabel: segment.closed ? undefined : t('worklog.openHint', { duration: formatDuration(segment.elapsedMinutes) }),
+        submitted: Boolean(segment.endEventId && byId.get(segment.endEventId)?.worklogId),
         notes: segment.notes,
         commits: segment.commits,
       };

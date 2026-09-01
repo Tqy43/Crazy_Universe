@@ -324,6 +324,7 @@ export function renderTaskListShell(cspSource: string): { html: string } {
         { action: 'start', label: labels.toolsUse || '使用', icon: iconPlay },
         { action: 'end', label: labels.toolsDisable || '停用', icon: iconEnd },
         { action: 'hide', label: labels.hide || '隐藏', icon: iconHide },
+        { action: 'login', label: labels.worklogLogin || '登录飞书工时', icon: iconFeishu },
       ];
     }
 

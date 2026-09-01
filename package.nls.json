@@ -13,6 +13,7 @@
   "command.filterTasks": "Search Tasks",
   "command.toggleLanguage": "Language",
   "command.openTools": "Tools",
+  "command.loginWorklog": "Sign in to Feishu Worklog",
   "command.filterTimeline": "Filter Timeline",
   "command.deleteTask": "Delete Task",
   "command.renameTask": "Rename Task",
@@ -24,5 +25,6 @@
   "config.locale.en": "English",
   "config.locale.zh-cn": "Chinese",
   "config.worklog.enabled": "Enable experimental Feishu worklog plugin sync (in-house plugin only, not official work-hour management; not generally applicable)",
-  "config.worklog.running": "Whether the Feishu worklog tool is currently running"
+  "config.worklog.running": "Whether the Feishu worklog tool is currently running",
+  "config.worklog.userId": "Feishu worklog user id (used if sniffing does not capture it)"
 }

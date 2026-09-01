@@ -4,7 +4,25 @@
 
 A VS Code / Cursor extension for managing multiple development task contexts and recording your workflow locally, privacy-first.
 
-## Features
+## Install
+
+Install [Crazy Universe](https://marketplace.visualstudio.com/items?itemName=CrazyUniverse.crazy-universe) from the Visual Studio Marketplace, or search **Crazy Universe** in the VS Code / Cursor Extensions view.
+
+## Features /Local builds
+
+Install a given version from the matching `.vsix` link below (Extensions → `…` → **Install from VSIX…**). All builds: [version/](version/).
+
+### [1.1.0](version/crazy-universe-1.1.0.vsix)
+
+- **Tools** group in the task list: enable / disable / hide an in-house plugin without mixing it into task search
+- Optional **Feishu worklog** (In-house plugin, not official 日志管理): pick closed work segments on the timeline and submit hours after you confirm
+- Work-segment view: time range + duration + workspace/branch; in-progress segments are shown but not selectable
+- Multi-select sums closed-segment minutes (gaps such as lunch are not counted); one confirm posts one work item
+- Sign in via Tools → **Sign in to Feishu worklog** (dedicated Chrome profile). The extension still works offline if worklog is off
+
+
+
+### [1.0.0](version/crazy-universe-1.0.0.vsix)
 
 - Tasks are grouped into **Current / Active / Completed**; at most one task can be in progress
 - Start / pause / complete; a completed task can be moved back to Active (paused) and is not started automatically
@@ -15,9 +33,7 @@ A VS Code / Cursor extension for managing multiple development task contexts and
 - Feishu IDs open the matching task; if none is found the UI shows `#none`
 - Switch the sidebar, prompts, and status bar between **English** and **中文** with the globe icon (left of search), or set `Crazy Universe: Locale`
 
-## Install
 
-Install [Crazy Universe](https://marketplace.visualstudio.com/items?itemName=CrazyUniverse.crazy-universe) from the Visual Studio Marketplace, or search **Crazy Universe** in the VS Code / Cursor Extensions view.
 
 ## Development
 
@@ -55,11 +71,14 @@ Crazy_Universe/
 │   └── webview/              # task list / timeline HTML
 ├── resources/                # Activity Bar, status, and action icons
 ├── docs/                     # product / visual / development docs
+├── version/                  # versioned VSIX builds
 ├── package.json
 ├── package.nls.json          # English contributes strings
 ├── package.nls.zh-cn.json    # Chinese contributes strings
 └── esbuild.js
 ```
+
+
 
 ## Test and package
 
@@ -67,6 +86,8 @@ Crazy_Universe/
 npm run lint
 npm run package
 ```
+
+
 
 ## Feedback
 

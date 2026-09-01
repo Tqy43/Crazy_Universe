@@ -18,6 +18,7 @@ export const COMMANDS = {
   toggleLanguage: 'crazyUniverse.toggleLanguage',
   openTools: 'crazyUniverse.openTools',
   filterTimeline: 'crazyUniverse.filterTimeline',
+  loginWorklog: 'crazyUniverse.loginWorklog',
   deleteTask: 'crazyUniverse.deleteTask',
   renameTask: 'crazyUniverse.renameTask',
   statusBarPick: 'crazyUniverse.statusBarPick',
@@ -37,6 +38,7 @@ export const CONFIG = {
   locale: 'crazyUniverse.locale',
   worklogEnabled: 'crazyUniverse.worklog.enabled',
   worklogRunning: 'crazyUniverse.worklog.running',
+  worklogUserId: 'crazyUniverse.worklog.userId',
 } as const;
 
 export const OUTPUT_CHANNEL = 'Crazy Universe';

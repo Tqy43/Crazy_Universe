@@ -115,6 +115,8 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           await this.setWorklog({ visible: true, running: false });
         } else if (action === 'hide') {
           await this.setWorklog({ visible: false, running: false });
+        } else if (action === 'login') {
+          await vscode.commands.executeCommand('crazyUniverse.loginWorklog');
         }
         return;
       }

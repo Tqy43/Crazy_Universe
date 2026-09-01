@@ -2,7 +2,7 @@
   "name": "crazy-universe",
   "displayName": "Crazy Universe",
   "description": "%extension.description%",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "CrazyUniverse",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -122,6 +122,11 @@
         }
       },
       {
+        "command": "crazyUniverse.loginWorklog",
+        "title": "%command.loginWorklog%",
+        "category": "Crazy Universe"
+      },
+      {
         "command": "crazyUniverse.filterTimeline",
         "title": "%command.filterTimeline%",
         "category": "Crazy Universe",
@@ -173,6 +178,10 @@
         {
           "command": "crazyUniverse.openTimeline",
           "when": "crazyUniverse.hasSelection"
+        },
+        {
+          "command": "crazyUniverse.loginWorklog",
+          "when": "config.crazyUniverse.worklog.enabled"
         },
         {
           "command": "crazyUniverse.deleteTask",
@@ -252,6 +261,11 @@
           "type": "boolean",
           "default": true,
           "description": "%config.worklog.running%"
+        },
+        "crazyUniverse.worklog.userId": {
+          "type": "string",
+          "default": "",
+          "description": "%config.worklog.userId%"
         }
       }
     }

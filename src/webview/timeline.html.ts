@@ -244,6 +244,26 @@ export function renderTimelineShell(): { html: string } {
       height: auto;
       resize: none;
     }
+    .worklog-error {
+      flex-shrink: 0;
+      margin: 0 12px 8px;
+      color: var(--vscode-errorForeground);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .worklog-login-link {
+      display: inline;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: var(--vscode-textLink-foreground);
+      cursor: pointer;
+      font: inherit;
+      text-decoration: underline;
+    }
+    .worklog-login-link:hover {
+      color: var(--vscode-textLink-activeForeground);
+    }
     .worklog-panel-foot {
       flex-shrink: 0;
       display: flex;
@@ -447,6 +467,7 @@ export function renderTimelineShell(): { html: string } {
               <textarea id="workDescription"></textarea></label>
           </div>
         </div>
+        <p class="worklog-error hidden" id="worklogError"></p>
         <div class="worklog-panel-foot">
           <button class="btn" id="worklogCancel" type="button">取消</button>
           <button class="btn primary" id="worklogSave" type="button">确认登记</button>
@@ -498,11 +519,14 @@ export function renderTimelineShell(): { html: string } {
     const workStartedEl = document.getElementById('workStarted');
     const workMinutesEl = document.getElementById('workMinutes');
     const workDescriptionEl = document.getElementById('workDescription');
+    const worklogSaveEl = document.getElementById('worklogSave');
+    const worklogErrorEl = document.getElementById('worklogError');
     let ui = {};
     let state = {};
     let selectedIds = [];
     let feedView = 'events';
     let worklogModalOpen = false;
+    let worklogErrorTimer = 0;
 
     function applyUi(next) {
       if (!next) {
@@ -550,6 +574,31 @@ export function renderTimelineShell(): { html: string } {
       errorEl.classList.toggle('hidden', !message);
     }
 
+    function showWorklogError(message) {
+      window.clearTimeout(worklogErrorTimer);
+      worklogErrorTimer = 0;
+      if (!message) {
+        worklogErrorEl.textContent = '';
+        worklogErrorEl.classList.add('hidden');
+        return;
+      }
+      worklogErrorEl.innerHTML = linkifyWorklogLogin(message);
+      worklogErrorEl.classList.remove('hidden');
+      worklogErrorTimer = window.setTimeout(() => showWorklogError(''), 30000);
+    }
+
+    function linkifyWorklogLogin(message) {
+      const escaped = escapeHtml(message);
+      if (escaped.includes('登录')) {
+        return escaped.split('登录').join(
+          '<button type="button" class="worklog-login-link" data-worklog-login="1">登录</button>',
+        );
+      }
+      return escaped.replace(/sign in/gi, (match) =>
+        '<button type="button" class="worklog-login-link" data-worklog-login="1">' + match + '</button>',
+      );
+    }
+
     function showWorklogHint(message) {
       worklogHintEl.textContent = message || '';
       worklogHintEl.classList.toggle('hidden', !message);
@@ -566,6 +615,9 @@ export function renderTimelineShell(): { html: string } {
       worklogModalOpen = !!open;
       worklogPanelEl.classList.toggle('hidden', !open);
       feedEl.classList.toggle('hidden', !!open);
+      worklogSaveEl.disabled = false;
+      showWorklogError('');
+      showError('');
       if (open) {
         showWorklogHint('');
         fillWorklogForm();
@@ -771,13 +823,16 @@ export function renderTimelineShell(): { html: string } {
         const switched = segment.workspaceChanged
           ? ' · ' + escapeHtml(ui.worklogSwitched || '')
           : '';
+        const submitted = segment.submitted
+          ? ' · ' + escapeHtml(ui.worklogSubmitted || '')
+          : '';
         return date +
           '<article class="segment' + selectedClass + openClass + '" data-segment="' + escapeHtml(segment.id) + '">' +
           '<label class="segment-head">' +
           '<input type="checkbox" data-segment-check="' + escapeHtml(segment.id) + '"' + checked + disabled + ' />' +
           '<span class="segment-title"><strong>' + escapeHtml(segment.rangeLabel) +
           '  ' + escapeHtml(duration) + '</strong>' +
-          '<div class="segment-meta">' + escapeHtml(segment.workspaceLabel || '') + switched + '</div></span></label></article>';
+          '<div class="segment-meta">' + escapeHtml(segment.workspaceLabel || '') + switched + submitted + '</div></span></label></article>';
       }).join('');
     }
 
@@ -857,8 +912,27 @@ export function renderTimelineShell(): { html: string } {
         showError('');
         return;
       }
+      if (message.type === 'worklogResult') {
+        worklogSaveEl.disabled = false;
+        if (message.ok) {
+          setWorklogModal(false);
+        } else if (message.message) {
+          showWorklogError(message.message);
+        }
+        return;
+      }
+      if (message.type === 'worklogLoginResult') {
+        if (message.ok) {
+          showWorklogError('');
+        } else if (message.message) {
+          showWorklogError(message.message);
+        }
+        return;
+      }
       if (message.type === 'error') {
-        showError(message.message);
+        if (!worklogModalOpen) {
+          showError(message.message);
+        }
         return;
       }
       if (message.type !== 'state') return;
@@ -903,6 +977,11 @@ export function renderTimelineShell(): { html: string } {
       if (!target || target.nodeType !== 1) {
         return;
       }
+      if (target.closest('[data-worklog-login]')) {
+        window.clearTimeout(worklogErrorTimer);
+        vscode.postMessage({ type: 'worklogLogin' });
+        return;
+      }
       if (target.closest('#dismissGit')) {
         vscode.postMessage({ type: 'dismissGitHint' });
         return;
@@ -931,14 +1010,16 @@ export function renderTimelineShell(): { html: string } {
           setWorklogModal(false);
           return;
         }
+        showWorklogError('');
+        worklogSaveEl.disabled = true;
         vscode.postMessage({
           type: 'worklogConfirm',
           workItem: workItemEl.value,
           startedAt: fromDatetimeLocal(workStartedEl.value),
           minutes: Number(workMinutesEl.value),
           description: workDescriptionEl.value,
+          segmentIds: selectedIds.slice(),
         });
-        setWorklogModal(false);
         return;
       }
       const fileEl = target.closest('[data-file]');

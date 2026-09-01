@@ -9,6 +9,8 @@ import { snapshotPreviewText } from '../snapshot/SnapshotCollector';
 import type { TaskStore } from '../store/TaskStore';
 import { renderTimelineShell } from '../webview/timeline.html';
 import { buildTimelineViewModel, type TimelineFilter } from '../webview/timelineModel';
+import { buildWorkSegments } from '../domain/workSegments';
+import type { WorklogService } from '../worklog/WorklogService';
 
 const NOTE_KIND_IDS: NoteKind[] = ['change', 'action', 'test', 'commit', 'issue', 'next', 'other'];
 
@@ -27,6 +29,7 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
     private readonly store: TaskStore,
     private readonly service: TaskService,
     private readonly collector: SnapshotCollector,
+    private readonly worklog: WorklogService,
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -113,7 +116,10 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
         await this.addNote(payload.noteKind, payload.body);
         return;
       case 'worklogConfirm':
-        this.confirmWorklogDraft(payload);
+        await this.confirmWorklogDraft(payload);
+        return;
+      case 'worklogLogin':
+        await this.loginWorklogFromPanel();
         return;
       case 'dismissGitHint':
         this.gitHintDismissed = true;
@@ -236,17 +242,58 @@ export class TimelineViewProvider implements vscode.WebviewViewProvider {
     void vscode.commands.executeCommand('setContext', CONTEXT.timelineFeed, feed);
   }
 
-  private confirmWorklogDraft(payload: Record<string, unknown>): void {
-    const workItem = String(payload.workItem ?? '').trim() || '—';
+  private async loginWorklogFromPanel(): Promise<void> {
+    try {
+      await this.worklog.login();
+      void this.view?.webview.postMessage({ type: 'worklogLoginResult', ok: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void this.view?.webview.postMessage({ type: 'worklogLoginResult', ok: false, message });
+    }
+  }
+
+  private async confirmWorklogDraft(payload: Record<string, unknown>): Promise<void> {
+    const workItem = String(payload.workItem ?? '').trim();
     const minutes = Number.isFinite(Number(payload.minutes)) ? Math.round(Number(payload.minutes)) : 0;
-    const started = String(payload.startedAt ?? '').trim() || '—';
-    void vscode.window.showInformationMessage(
-      t('worklog.localOnly', {
-        workItem,
-        minutes: String(minutes),
-        started,
-      }),
-    );
+    const startedAt = String(payload.startedAt ?? '').trim();
+    const description = String(payload.description ?? '');
+    const segmentIds = Array.isArray(payload.segmentIds)
+      ? payload.segmentIds.map((item) => String(item))
+      : [];
+    const task = this.selectedTask;
+    try {
+      const worklogId = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: t('worklog.submitting') },
+        () =>
+          this.worklog.submit({
+            workItem,
+            startedAt,
+            minutes,
+            description,
+          }),
+      );
+      if (task && segmentIds.length) {
+        const ends = new Set(
+          buildWorkSegments(this.store.getEvents(task.id))
+            .filter((segment) => segmentIds.includes(segment.id))
+            .map((segment) => segment.endEventId)
+            .filter((id): id is string => Boolean(id)),
+        );
+        await this.store.commit((draft) => {
+          for (const event of draft.events) {
+            if (ends.has(event.id)) {
+              event.worklogId = worklogId;
+            }
+          }
+        });
+        this.selectedTask = this.store.getTask(task.id);
+      }
+      void this.view?.webview.postMessage({ type: 'worklogResult', ok: true });
+      void vscode.window.showInformationMessage(t('worklog.success'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void this.view?.webview.postMessage({ type: 'worklogResult', ok: false, message });
+    }
   }
 
   private postError(message: string): void {

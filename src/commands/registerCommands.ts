@@ -7,6 +7,7 @@ import { getLocale, resolveLocale, setLocale, t } from '../i18n';
 import type { TaskStore } from '../store/TaskStore';
 import type { TaskListViewProvider } from '../views/TaskListViewProvider';
 import type { TimelineViewProvider } from '../views/TimelineViewProvider';
+import type { WorklogService } from '../worklog/WorklogService';
 import { isTaskItem } from '../views/taskTreeNodes';
 
 export function registerCommands(
@@ -16,9 +17,10 @@ export function registerCommands(
     store: TaskStore;
     taskList: TaskListViewProvider;
     timelineProvider: TimelineViewProvider;
+    worklog: WorklogService;
   },
 ): void {
-  const { service, store, taskList, timelineProvider } = deps;
+  const { service, store, taskList, timelineProvider, worklog } = deps;
 
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMANDS.newTask, async () => {
@@ -95,6 +97,13 @@ export function registerCommands(
     }),
     vscode.commands.registerCommand(COMMANDS.filterTasks, () => taskList.toggleSearch()),
     vscode.commands.registerCommand(COMMANDS.openTools, () => pickTools(taskList)),
+    vscode.commands.registerCommand(COMMANDS.loginWorklog, async () => {
+      try {
+        await worklog.login();
+      } catch (error) {
+        showError(t('error.worklog'), error);
+      }
+    }),
     vscode.commands.registerCommand(COMMANDS.toggleLanguage, () => pickLanguage()),
     vscode.commands.registerCommand(COMMANDS.filterTimeline, () => timelineProvider.pickFilter()),
     vscode.commands.registerCommand(COMMANDS.startTask, async (item?: unknown) => {

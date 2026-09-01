@@ -72,4 +72,5 @@ export interface Event {
   noteKind?: NoteKind;
   body?: string;
   snapshot?: AutoSnapshot;
+  worklogId?: string;
 }

@@ -9,6 +9,7 @@ import { StoreVersionError, TaskStore } from './store/TaskStore';
 import { StatusBarController } from './views/StatusBarController';
 import { TaskListViewProvider } from './views/TaskListViewProvider';
 import { TimelineViewProvider } from './views/TimelineViewProvider';
+import { WorklogService } from './worklog/WorklogService';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   applyLocaleFromConfig();
@@ -35,6 +36,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const collector = new SnapshotCollector(new GitReader((message) => output.appendLine(message)));
   const service = new TaskService(store, (options) => collector.capture(options));
+  const worklog = new WorklogService(context, (message) => output.appendLine(message));
 
   await store.commit((draft) => {
     const demoId = 'crazy-universe-worklog-demo';
@@ -45,7 +47,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       output.appendLine('已移除工时演示任务。');
     }
   });
-  const timelineProvider = new TimelineViewProvider(context, store, service, collector);
+  const timelineProvider = new TimelineViewProvider(context, store, service, collector, worklog);
   const taskList = new TaskListViewProvider(context, store, (task) => {
     timelineProvider.setSelectedTask(task);
   });
@@ -93,7 +95,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   void vscode.commands.executeCommand('setContext', CONTEXT.hasSelection, false);
   void vscode.commands.executeCommand('setContext', CONTEXT.timelineFeed, 'none');
 
-  registerCommands(context, { service, store, taskList, timelineProvider });
+  registerCommands(context, { service, store, taskList, timelineProvider, worklog });
 }
 
 export function deactivate(): void {}
